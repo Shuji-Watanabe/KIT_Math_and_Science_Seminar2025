@@ -1,0 +1,2 @@
+# KIT_Math_and_Science_Seminar2025
+KIT数理講座2025で使用するWebアプリです
