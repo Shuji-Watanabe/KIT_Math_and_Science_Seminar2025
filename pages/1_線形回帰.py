@@ -30,6 +30,11 @@ with display_col02[1]:
     y_pred = p * x_input + q
     # 残差平方和（RSS）の計算
     rss = np.sum((y_input - y_pred) ** 2)
+    # 試行回数を最大1000回に制限
+    if len(st.session_state.history) >= 1000:
+        st.session_state.history.pop(0)  # 最も古いデータを削除
+    st.session_state.history.append({"p": p, "q": q, "RSS": rss})
+    
     df_history = pd.DataFrame(st.session_state.history)
     # RSS が最小のインデックスを取得
     min_index = df_history["RSS"].idxmin()
@@ -38,10 +43,7 @@ with display_col02[1]:
 """ """
     
 
-# 試行回数を最大1000回に制限
-if len(st.session_state.history) >= 1000:
-    st.session_state.history.pop(0)  # 最も古いデータを削除
-st.session_state.history.append({"p": p, "q": q, "RSS": rss})
+
 
 with display_col02[0]:
     # Figure 作成
