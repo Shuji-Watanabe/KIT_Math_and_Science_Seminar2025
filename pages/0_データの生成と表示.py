@@ -9,17 +9,18 @@ st.title("y = ax + b + e に従うデータ生成")
 
 # サイドバーでパラメータを入力
 st.sidebar.header("パラメータ設定")
-step_num = st.sidebar.number_input("ステップ数", min_value=0.001, value=0.1)
+
 a = st.sidebar.number_input("a (傾き)", min_value=-10.0, max_value=10.0, value=2.0, step=0.1)
 b = st.sidebar.number_input("b (切片)", min_value=-10.0, max_value=10.0, value=1.0, step=0.1)
 n = st.sidebar.number_input("データ点の数", min_value=10, max_value=100, value=100, step=10)
+e_sd = st.sidebar.number_input("誤差の標準偏差", min_value=0.1, value=1.0)
 x_min = st.sidebar.number_input("xの最小値", min_value=-100.0, max_value=100.0, value=0.0, step=1.0)
 x_max = st.sidebar.number_input("xの最大値", min_value=-100.0, max_value=100.0, value=10.0, step=1.0)
 
 # データを生成
 if st.button("データを生成"):
     x = np.linspace(x_min, x_max, n)
-    e = np.random.normal(0, 3, n)
+    e = np.random.normal(0, e_sd , n)
     y = a * x + b + e
 
     sample_data_df = pd.DataFrame({

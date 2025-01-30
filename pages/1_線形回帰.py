@@ -21,14 +21,20 @@ with display_col02[1]:
     if st.button("探索履歴の初期化") or ("history" not in st.session_state):
         st.session_state.history = []  # 初期化 
     # p, q のスライダー設定
-    num_step = st.number_input("探索ステップ", value=0.001)
-    p = st.number_input("傾き p", min_value=-5.000, max_value=5.000, value=1.000, step=num_step)
-    q = st.number_input("切片 q", min_value=-5.000, max_value=5.000, value=0.000, step=num_step)
+    num_step = st.number_input("探索ステップ", value=0.001,format="%.3f")
+    p = st.number_input("傾き p", min_value=-5.000, max_value=5.000, value=1.000, step=num_step,format="%.3f")
+    q = st.number_input("切片 q", min_value=-5.000, max_value=5.000, value=0.000, step=num_step,format="%.3f")
+    p, q = np.float64(p), np.float64(q)
+
     # モデルによる予測値（Predicted value）
     y_pred = p * x_input + q
     # 残差平方和（RSS）の計算
     rss = np.sum((y_input - y_pred) ** 2)
     df_history = pd.DataFrame(st.session_state.history)
+    # RSS が最小のインデックスを取得
+    min_index = df_history["RSS"].idxmin()
+    # RSS が最小の a, b を取得 (iloc を使用)
+    optimal_row = list(df_history.iloc[min_index])
 """ """
     
 
@@ -52,21 +58,7 @@ with display_col02[0]:
     # Streamlit で表示
     st.plotly_chart(fig)
 
-if len(df_history) != 0:
-    # RSS が最小のインデックスを取得
-    min_index = int(df_history["RSS"].idxmin())
-    # RSS が最小の a, b を取得
-    optimal_row = df_history.loc[min_index]
-    st.markdown(f"今のRSSの値と探索範囲におけるRSSの最小値，最小値における傾き$~p_{{\\rm m.opt}}~$と$~y~$切片$~q_{{\\rm m.opt}}~$")
-    disp_res_col = st.columns([1]*4)
-    with disp_res_col[0]:
-        st.metric("今のRSS",f"{rss:.3f}")
-    with disp_res_col[1]:
-        st.metric("RSS最小値",f"{optimal_row[2]: .3f}")
-    with disp_res_col[2]:
-        st.metric("$~p_{{\\rm m.opt}}~$",f"{optimal_row[0]: .3f}")
-    with disp_res_col[3]:
-        st.metric("$~q_{{\\rm m.opt}}~$",f"{optimal_row[1]: .3f}")
+
 
 
 display_col03 = st.columns([1,1])
@@ -136,6 +128,19 @@ tmp_data_df = pd.DataFrame({ "opted_p":[optimal_row[0]]
                             ,"opted_RSS":[optimal_row[2]]
                             })
 manual_opt_results = pd.concat([input_data_df,df_history,tmp_data_df],axis=1)
-st.dataframe(manual_opt_results)
+# st.dataframe(manual_opt_results)
 st.session_state.mopt_datas = manual_opt_results
+
+if len(df_history) != 0:
+
+    st.markdown(f"今のRSSの値と探索範囲におけるRSSの最小値，最小値における傾き$~p_{{\\rm m.opt}}~$と$~y~$切片$~q_{{\\rm m.opt}}~$")
+    disp_res_col = st.columns([1]*4)
+    with disp_res_col[0]:
+        st.metric("今のRSS",f"{rss:.3f}")
+    with disp_res_col[1]:
+        st.metric("RSS最小値",f"{optimal_row[2]: .3f}")
+    with disp_res_col[2]:
+        st.metric("$~p_{{\\rm m.opt}}~$",f"{optimal_row[0]: .3f}")
+    with disp_res_col[3]:
+        st.metric("$~q_{{\\rm m.opt}}~$",f"{optimal_row[1]: .3f}")
 
