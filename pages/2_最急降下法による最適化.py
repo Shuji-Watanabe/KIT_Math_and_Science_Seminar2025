@@ -124,7 +124,7 @@ with selected_tab2:
         initial_p = np.float64(popt_history_df.iloc[0]["p_hist"])
         initial_q = np.float64(popt_history_df.iloc[0]["q_hist"])
         initial_y_pred = initial_p * x + initial_q
-
+    
         # 初期直線を描く
         line_trace = go.Scatter(x=x, y=initial_y_pred, mode="lines", name="回帰直線", line=dict(color="red"))
         fig_opt.add_trace(line_trace)
