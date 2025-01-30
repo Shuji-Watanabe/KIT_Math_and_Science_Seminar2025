@@ -21,7 +21,7 @@ st.subheader("パラメータの最適化の実行",divider="orange")
 
 # 最大反復回数
 num_iter_max = 10000
-alpha = 0.00001  # 学習率
+alpha = 0.0001  # 学習率
 # 結果を保存する配列
 popt_history_array = np.zeros((num_iter_max, 3))
 # 初期値をセット
