@@ -114,17 +114,13 @@ with selected_tab1:
         st.warning("まだ最適化が終わっていません．")
 with selected_tab2:
     try:
-
-        # アニメーションのフレームリスト
-        frames = []
-
         # 最初の散布図の作成
         fig_opt = go.Figure()
 
         # 散布図の追加（最初のデータ）
         fig_opt.add_trace(go.Scatter(x=x, y=y, mode='markers', name='データ', marker=dict(color="blue")))
 
-        # 初期の直線を追加
+        # 初期の直線を描く
         initial_p = np.float64(popt_history_df.iloc[0]["p_hist"])
         initial_q = np.float64(popt_history_df.iloc[0]["q_hist"])
         initial_y_pred = initial_p * x + initial_q
@@ -133,19 +129,18 @@ with selected_tab2:
         line_trace = go.Scatter(x=x, y=initial_y_pred, mode="lines", name="回帰直線", line=dict(color="red"))
         fig_opt.add_trace(line_trace)
 
-        # フレームを作成して直線の更新を行う
-        for i in range(1, len(popt_history_df)):
-            p = np.float64(popt_history_df.iloc[i]["p_hist"])
-            q = np.float64(popt_history_df.iloc[i]["q_hist"])
-            y_pred = p * x + q  # 直線の計算
-
-            # フレームに新しい直線データを追加
-            frame = go.Frame(
-                data=[go.Scatter(x=x, y=y, mode="markers", name="データ", marker=dict(color="blue")),
-                    go.Scatter(x=x, y=y_pred, mode="lines", name="回帰直線", line=dict(color="red"))],
+        # フレームの設定（動的生成）
+        fig_opt.frames = [
+            go.Frame(
+                data=[  # フレームごとのデータ
+                    go.Scatter(x=x, y=y, mode="markers", name="データ", marker=dict(color="blue")),
+                    go.Scatter(x=x, y=popt_history_df.iloc[i]["p_hist"] * x + popt_history_df.iloc[i]["q_hist"],
+                            mode="lines", name="回帰直線", line=dict(color="red"))
+                ],
                 name=f"Step {i+1}"
             )
-            frames.append(frame)
+            for i in range(1, len(popt_history_df))  # フレームの数だけ生成
+        ]
 
         # アニメーションの設定
         fig_opt.update_layout(
@@ -188,9 +183,7 @@ with selected_tab2:
             }]
         )
 
-        # アニメーション用のフレームを設定
-        fig_opt.frames = frames
-
+        # 描画
         st.plotly_chart(fig_opt)
     except : 
         st.warning("まだ最適化が終わっていません．")
