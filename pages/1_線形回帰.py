@@ -21,9 +21,9 @@ with display_col02[1]:
     if st.button("探索履歴の初期化") or ("history" not in st.session_state):
         st.session_state.history = []  # 初期化 
     # p, q のスライダー設定
-    num_step = st.number_input("探索ステップ", value=0.01)
-    p = st.number_input("傾き p", min_value=-5.00, max_value=5.00, value=1.00, step=num_step)
-    q = st.number_input("切片 q", min_value=-5.00, max_value=5.00, value=0.00, step=num_step)
+    num_step = st.number_input("探索ステップ", value=0.001)
+    p = st.number_input("傾き p", min_value=-5.000, max_value=5.000, value=1.000, step=num_step)
+    q = st.number_input("切片 q", min_value=-5.000, max_value=5.000, value=0.000, step=num_step)
     # モデルによる予測値（Predicted value）
     y_pred = p * x_input + q
     # 残差平方和（RSS）の計算
@@ -76,9 +76,10 @@ with display_col03[0]:
 
     # 3D 散布図の作成
     fig = px.scatter_3d(df_history,
-                        x="p",y="q",z="RSS",
-                        color="RSS",
-                        color_continuous_scale="Rainbow",title="試行ごとの (p, q, RSS) 3D プロット"
+                        x="p",y="q",z="RSS"
+                        ,color="RSS"
+                        ,color_continuous_scale="Rainbow_r"
+                        ,title="試行ごとの (p, q, RSS) 3D プロット"
     )
 
     fig.update_traces(marker=dict(size=2))  # 点のサイズ調整
@@ -92,8 +93,8 @@ with display_col03[0]:
     # Streamlit で表示
     st.plotly_chart(fig)
 with display_col03[1]:
-    p_vals = np.linspace(optimal_row[0]- 0.1,  optimal_row[0] + 0.1, 30)
-    q_vals = np.linspace(optimal_row[1] - 0.1, optimal_row[1] + 0.1, 30)
+    p_vals = np.linspace(optimal_row[0]- 0.05,  optimal_row[0] + 0.05, 50)
+    q_vals = np.linspace(optimal_row[1] - 0.01, optimal_row[1] + 0.01, 50)
     Mesh_p, Mesh_q = np.meshgrid(p_vals, q_vals)
     # 各 (p, q) に対する RSS を計算
     RSS = np.zeros((len(q_vals), len(p_vals))) # RSS の格納用配列
@@ -106,8 +107,9 @@ with display_col03[1]:
     # 3D サーフェスプロットを追加
     fig2.add_trace(go.Surface(
         x=p_vals, y=q_vals, z=RSS, 
-        colorscale="Viridis", 
-        opacity=0.8
+        colorscale="Rainbow_r", 
+        opacity=0.6,
+        contours_z=dict(show=True, usecolormap=True, highlightcolor="limegreen", project_z=True)
     ))
 
     # レイアウト設定
@@ -129,21 +131,11 @@ with display_col03[1]:
     # Streamlit で表示
     st.plotly_chart(fig2)
 
-display_col04 = st.columns([2,1])
-# with display_col04[0]:
+tmp_data_df = pd.DataFrame({ "opted_p":[optimal_row[0]]
+                            ,"opted_q":[optimal_row[1]]
+                            ,"opted_RSS":[optimal_row[2]]
+                            })
+manual_opt_results = pd.concat([input_data_df,df_history,tmp_data_df],axis=1)
+st.dataframe(manual_opt_results)
+st.session_state.mopt_datas = manual_opt_results
 
-with display_col04[1]:
-
-
-
-    tmp_data_df = pd.DataFrame({ "opted_p":[optimal_row[0]]
-                                ,"opted_q":[optimal_row[1]]
-                                ,"opted_RSS":[optimal_row[2]]
-                                })
-    manual_opt_results = pd.concat([input_data_df,df_history,tmp_data_df],axis=1)
-    st.dataframe(manual_opt_results)
-
-
-
-if st.button("手動最適化の結果を保存"):
-    st.session_state.mopt_datas = manual_opt_results
