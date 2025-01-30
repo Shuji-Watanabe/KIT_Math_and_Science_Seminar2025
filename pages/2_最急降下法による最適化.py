@@ -21,7 +21,7 @@ st.subheader("パラメータの最適化の実行",divider="orange")
 
 # 最大反復回数
 num_iter_max = 10000
-alpha = 0.0001  # 学習率
+alpha = 0.00001  # 学習率
 # 結果を保存する配列
 popt_history_array = np.zeros((num_iter_max, 3))
 # 初期値をセット
@@ -114,78 +114,56 @@ with selected_tab1:
         st.warning("まだ最適化が終わっていません．")
 with selected_tab2:
     try:
-        num_frames = len(popt_history_df)
+
         # アニメーションのフレームリスト
         frames = []
 
-        for i in range(len(popt_history_df)):
+        # 最初の散布図の作成
+        fig_opt = go.Figure()
+
+        # 散布図の追加（最初のデータ）
+        fig_opt.add_trace(go.Scatter(x=x, y=y, mode='markers', name='データ', marker=dict(color="blue")))
+
+        # 初期の直線を追加
+        initial_p = np.float64(popt_history_df.iloc[0]["p_hist"])
+        initial_q = np.float64(popt_history_df.iloc[0]["q_hist"])
+        initial_y_pred = initial_p * x + initial_q
+
+        # 初期直線を描く
+        line_trace = go.Scatter(x=x, y=initial_y_pred, mode="lines", name="回帰直線", line=dict(color="red"))
+        fig_opt.add_trace(line_trace)
+
+        # フレームを作成して直線の更新を行う
+        for i in range(1, len(popt_history_df)):
             p = np.float64(popt_history_df.iloc[i]["p_hist"])
             q = np.float64(popt_history_df.iloc[i]["q_hist"])
             y_pred = p * x + q  # 直線の計算
 
-            # フレームの作成
+            # フレームに新しい直線データを追加
             frame = go.Frame(
-                data=[
-                    go.Scatter(x=x, y=y, mode="markers", name="データ", marker=dict(color="blue")),
-                    go.Scatter(x=x, y=y_pred, mode="lines", name=f"回帰直線", line=dict(color="red")),
-                ],
+                data=[go.Scatter(x=x, y=y, mode="markers", name="データ", marker=dict(color="blue")),
+                    go.Scatter(x=x, y=y_pred, mode="lines", name="回帰直線", line=dict(color="red"))],
                 name=f"Step {i+1}"
             )
             frames.append(frame)
 
-        # 初期フレームの設定
-        fig = go.Figure(
-            data=[
-                go.Scatter(x=x, y=y, mode="markers", name="データ", marker=dict(color="blue")),
-                go.Scatter(x=x, y=x * popt_history_df.iloc[0]["p_hist"] + popt_history_df.iloc[0]["q_hist"], 
-                        mode="lines", name="回帰直線", line=dict(color="red"))
-            ],
-            layout=go.Layout(
-                title="回帰直線の変化 (アニメーション)",
-                xaxis=dict(title="x"),
-                yaxis=dict(title="y"),
-                annotations=[
-                    {
-                        "x": 8, "y": 15,  # 表示位置
-                        "text": f"Frame: 1/{num_frames}",
-                        "showarrow": False,
-                        "font": {"size": 16}
-                    }
-                ],
-                updatemenus=[{
-                    "type": "buttons",
-                    "direction": "left",  # ボタンを横並びに
-                    "x": 0.5, "y": -0.2,  # グラフの下に配置
-                    "xanchor": "center", "yanchor": "top",
-                    "buttons": [
-                        {
-                            "label": "再生",
-                            "method": "animate",
-                            "args": [None, {"frame": {"duration": 500, "redraw": True}, "fromcurrent": True}]
-                        },
-                        {
-                            "label": "停止",
-                            "method": "animate",
-                            "args": [[None], {"frame": {"duration": 0, "redraw": False}, "mode": "immediate"}]
-                        }
-                    ]
-                }]
-            ),
-            frames=frames
-        )
-
-        # フレーム数の表示を動的に更新
-        fig.update_layout(
+        # アニメーションの設定
+        fig_opt.update_layout(
+            title="回帰直線の変化 (アニメーション)",
+            xaxis=dict(title="x"),
+            yaxis=dict(title="y"),
             updatemenus=[{
                 "type": "buttons",
-                "direction": "left",  # ボタンを横並びに
-                "x": 0.5, "y": -0.2,  # グラフの下に配置
-                "xanchor": "center", "yanchor": "top",
+                "direction": "left",
+                "x": 0.5,
+                "y": -0.2,
+                "xanchor": "center",
+                "yanchor": "top",
                 "buttons": [
                     {
                         "label": "再生",
                         "method": "animate",
-                        "args": [None, {"frame": {"duration": 500, "redraw": True}, "fromcurrent": True}]
+                        "args": [None, {"frame": {"duration": 100, "redraw": True}, "fromcurrent": True}]
                     },
                     {
                         "label": "停止",
@@ -194,17 +172,25 @@ with selected_tab2:
                     }
                 ]
             }],
-            annotations=[
-                {
-                    "x": 8, "y": 15,
-                    "text": f"Frame: 1/{num_frames}",  # 初期フレーム数
-                    "showarrow": False,
-                    "font": {"size": 16}
-                }
-            ]
+            sliders=[{
+                "currentvalue": {
+                    "prefix": "Frame: ",
+                    "visible": True,
+                    "xanchor": "center",
+                },
+                "steps": [
+                    {"args": [
+                        [f"Step {i+1}"],
+                        {"frame": {"duration": 100, "redraw": True}, "mode": "immediate"}
+                    ], "label": f"Step {i+1}", "method": "animate"}
+                    for i in range(len(popt_history_df))
+                ]
+            }]
         )
 
+        # アニメーション用のフレームを設定
+        fig_opt.frames = frames
 
-        st.plotly_chart(fig)
+        st.plotly_chart(fig_opt)
     except : 
         st.warning("まだ最適化が終わっていません．")
