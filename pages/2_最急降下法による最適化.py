@@ -163,7 +163,7 @@ with selected_tab2:
                     {
                         "label": "再生",
                         "method": "animate",
-                        "args": [None, {"frame": {"duration": 100, "redraw": True}, "fromcurrent": True}]
+                        "args": [None, {"frame": {"duration": 2.5, "redraw": True}, "fromcurrent": True}]
                     },
                     {
                         "label": "停止",
@@ -181,7 +181,7 @@ with selected_tab2:
                 "steps": [
                     {"args": [
                         [f"Step {i+1}"],
-                        {"frame": {"duration": 100, "redraw": True}, "mode": "immediate"}
+                        {"frame": {"duration": 2.5, "redraw": True}, "mode": "immediate"}
                     ], "label": f"Step {i+1}", "method": "animate"}
                     for i in range(len(popt_history_df))
                 ]
