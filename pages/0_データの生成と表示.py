@@ -17,58 +17,56 @@ x_min = st.sidebar.number_input("xの最小値", min_value=-100.0, max_value=100
 x_max = st.sidebar.number_input("xの最大値", min_value=-100.0, max_value=100.0, value=10.0, step=1.0)
 
 # データを生成
-x = np.linspace(x_min, x_max, n)
-e = np.random.normal(0, 3, n)
-y = a * x + b + e
+if st.button("データを生成"):
+    x = np.linspace(x_min, x_max, n)
+    e = np.random.normal(0, 3, n)
+    y = a * x + b + e
 
-sample_data_df = pd.DataFrame({
-    "x": x,
-    "y": y,
-    "a": a,  # 定数を列に入れる
-    "b": b  # 定数を列に入れる
-})
+    sample_data_df = pd.DataFrame({
+        "x": x,
+        "y": y,
+        "a": a,  # 定数を列に入れる
+        "b": b  # 定数を列に入れる
+    })
+else :
+    st.warning("データを生成してください．")
 
+if 'sample_data_df' in globals():
+    # プロットを作成
+    fig, ax = plt.subplots()
+    ax.scatter(x, y, label="Generated data", alpha=0.7)
+    ax.plot(x, a * x + b, color="red", label="y = ax + b")
+    ax.set_xlabel("x")
+    ax.set_ylabel("y")
+    ax.legend()
+    ax.set_title("Generated Data Following y = ax + b + e")
+    # Streamlitに表示
+    st.pyplot(fig)
 
+    display_col01 = st.columns([3,1])
+    with display_col01[0]:
+        st.write("記録されたデータの散布図")
+        x_input = pd.array(sample_data_df["x"])
+        y_input = pd.array(sample_data_df["y"])
+        # Figure 作成
+        fig = go.Figure()
+        # 散布図
+        fig.add_trace(go.Scatter(x=x_input, y=y_input, mode='markers', marker=dict(color='yellow', size=8), name="散布図"))
+        # Streamlit で表示
+        st.plotly_chart(fig)
 
-# プロットを作成
-fig, ax = plt.subplots()
-ax.scatter(x, y, label="Generated data", alpha=0.7)
-ax.plot(x, a * x + b, color="red", label="y = ax + b")
-ax.set_xlabel("x")
-ax.set_ylabel("y")
-ax.legend()
-ax.set_title("Generated Data Following y = ax + b + e")
-# Streamlitに表示
-st.pyplot(fig)
-
-
-if st.button("変数とデータの記録"):
-    st.session_state.data_df = sample_data_df
-
-display_col01 = st.columns([3,1])
-with display_col01[0]:
-    st.write("記録されたデータの散布図")
-    x_input = pd.array(sample_data_df["x"])
-    y_input = pd.array(sample_data_df["y"])
-    # Figure 作成
-    fig = go.Figure()
-    # 散布図
-    fig.add_trace(go.Scatter(x=x_input, y=y_input, mode='markers', marker=dict(color='yellow', size=8), name="散布図"))
-    # Streamlit で表示
-    st.plotly_chart(fig)
-
-with display_col01[1]:
-    # データを表示
-    st.write("記録されたデータ")
-    st.dataframe(sample_data_df)
-
-    # CSVとしてダウンロード
-    import io
-    csv = io.StringIO()
-    np.savetxt(csv, sample_data_df, delimiter=",", header="x,y", comments="")
-    st.download_button(
-        label="データをCSVとしてダウンロード",
-        data=csv.getvalue(),
-        file_name="generated_data.csv",
-        mime="text/csv"
-    )
+    with display_col01[1]:
+        # データを表示
+        st.write("記録されたデータ")
+        st.dataframe(sample_data_df)
+        st.session_state.data_df = sample_data_df
+        # CSVとしてダウンロード
+        import io
+        csv = io.StringIO()
+        np.savetxt(csv, sample_data_df, delimiter=",", header="x,y", comments="")
+        st.download_button(
+            label="データをCSVとしてダウンロード",
+            data=csv.getvalue(),
+            file_name="generated_data.csv",
+            mime="text/csv"
+        )
