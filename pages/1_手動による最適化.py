@@ -130,7 +130,7 @@ tmp_data_df = pd.DataFrame({ "opted_p":[optimal_row[0]]
                             ,"opted_RSS":[optimal_row[2]]
                             })
 manual_opt_results = pd.concat([input_data_df,df_history,tmp_data_df],axis=1)
-# st.dataframe(manual_opt_results)
+ 
 
 
 if len(df_history) != 0:
@@ -147,3 +147,5 @@ if len(df_history) != 0:
         st.metric("$~q_{{\\rm m.opt}}~$",f"{optimal_row[1]: .3f}")
 
 st.session_state.mopt_datas = manual_opt_results
+
+st.dataframe(manual_opt_results)

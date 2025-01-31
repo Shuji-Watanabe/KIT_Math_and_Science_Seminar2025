@@ -7,9 +7,10 @@ st.header("最急降下法を用いたパラメータの最適化",divider="rain
 """  """
 
 input_data_df = st.session_state.mopt_datas
+org_data_df = st.session_state.data_df
 # データを取得
-x = input_data_df["x"].to_numpy()
-y = input_data_df["y"].to_numpy()
+x = org_data_df["x"].to_numpy()
+y = org_data_df["y"].to_numpy()
 # RSS 関数
 def f_RSS(x, y, p, q):
     y_pred = p * x + q
@@ -20,27 +21,33 @@ def f_RSS(x, y, p, q):
 st.subheader("パラメータの最適化の実行",divider="orange")
 
 # 最大反復回数
-num_iter_max = 5000
-alpha = 0.00001  # 学習率
+num_iter_max = 50000
+alpha = 1.0e-5  # 学習率
 # 結果を保存する配列
-popt_history_array = np.zeros((num_iter_max, 3))
+popt_history_array = np.zeros((num_iter_max, 4))
 # 初期値をセット
 popt_history_array[0, 0] = input_data_df["opted_p"].to_numpy()[0]
 popt_history_array[0, 1] = input_data_df["opted_q"].to_numpy()[0]
-
+popt_history_array[0, 2] = input_data_df["opted_RSS"].to_numpy()[0]
 # 解析的に勾配を計算する関数
 def compute_gradients(x, y, p, q):
-    y_pred = p * x + q
-    dRSS_dp = -2 * np.sum(x * (y - y_pred))  # ∂RSS/∂p
-    dRSS_dq = -2 * np.sum(y - y_pred)        # ∂RSS/∂q
+    y_pred = np.float64(p) * x + np.float64(q) 
+    dRSS_dp = -np.float64(2) * np.sum(x * (y - y_pred))  # ∂RSS/∂p
+    dRSS_dq = -np.float64(2) * np.sum(y - y_pred)        # ∂RSS/∂q
     return dRSS_dp, dRSS_dq
 
+if "optimization start" not in st.session_state:
+    st.session_state["optimization start"] = False
+
 if st.button("最適化開始"):
+    st.session_state["optimization start"] = True
+
+if st.session_state["optimization start"]:
     # 最適化ループ
     niter = 0
     d_rss = 1
     # for niter in range(num_iter_max - 1):
-    while   (niter < num_iter_max-1) and (d_rss > 1.0e-15):
+    while   (niter < num_iter_max-1) and (d_rss > 1.0e-10) :
         p = popt_history_array[niter, 0]
         q = popt_history_array[niter, 1]
 
@@ -50,18 +57,29 @@ if st.button("最適化開始"):
         # 勾配降下による更新
         p_new = p - alpha * dRSS_dp
         q_new = q - alpha * dRSS_dq
+        d_rss = abs(f_RSS(x, y, p_new, q_new) - f_RSS(x, y, p, q))
 
         # 更新後の値を保存
         popt_history_array[niter + 1, 0] = p_new
         popt_history_array[niter + 1, 1] = q_new
         popt_history_array[niter + 1, 2] = f_RSS(x, y, p_new, q_new)
+        popt_history_array[niter + 1, 3] = d_rss
         
         niter +=1
-        d_rss = abs(f_RSS(x, y, p_new, q_new) - f_RSS(x, y, p, q))
+        
+    popt_history_array = popt_history_array[0:niter]
+    
 
-    popt_history_array = popt_history_array[1:niter]
+    ini_data = popt_history_array[0]
+    ini_RSS=f_RSS(x, y, np.float64(ini_data[0]), np.float64(ini_data[1]))
+    ini_dRSS_dp, ini_dRSS_dq = compute_gradients(x, y, ini_data[0], ini_data[1])
+    ini_p_new = ini_data[0]- alpha * ini_dRSS_dp
+    ini_q_new = ini_data[1]- alpha * ini_dRSS_dq
+    ini_d_rss = abs(f_RSS(x, y, ini_p_new, ini_q_new ) - f_RSS(x, y, ini_data[0], ini_data[1]))
+    
+    
     # DataFrame に変換
-    popt_history_df = pd.DataFrame(popt_history_array, columns=["p_hist", "q_hist", "RSS_hist"])
+    popt_history_df = pd.DataFrame(popt_history_array, columns=["p_hist", "q_hist", "RSS_hist","d_ress_hist"])
 
     disp_col01 = st.columns([2,1])
 
@@ -79,6 +97,37 @@ if st.button("最適化開始"):
     with disp_col01[1]:
         st.write(f"データの確認")
         st.dataframe(popt_history_df)
+
+
+
+    tmp_y_pred = np.float64(ini_data[0]) * np.float64(x) + np.float64(ini_data[1])
+    st.write("最適化前")
+    disp_res_col = st.columns([1]*5)
+    with disp_res_col[0]:
+        st.metric("最適化回数",f"{0}")
+    with disp_res_col[1]:
+        st.metric("$\|d(rss)\|$",f"{ini_d_rss:2.1e}")
+    with disp_res_col[2]:
+        st.metric("RSS",f"{ini_RSS: .3f}")
+    with disp_res_col[3]:
+        st.metric("$~p_{{\\rm opt}}~$",f"{ini_data[0]: .3f}")
+    with disp_res_col[4]:
+        st.metric("$~q_{{\\rm opt}}~$",f"{ini_data[1]: .3f}")
+
+    st.write("最適化後")
+    disp_res_col = st.columns([1]*5)
+    with disp_res_col[0]:
+        st.metric("最適化回数",f"{niter}")
+    with disp_res_col[1]:
+        st.metric("$\|d(rss)\|$",f"{d_rss:2.1e}")
+    with disp_res_col[2]:
+        st.metric("RSS",f"{f_RSS(x, y, p_new, q_new): .3f}")
+    with disp_res_col[3]:
+        st.metric("$~p_{{\\rm opt}}~$",f"{p_new: .3f}")
+    with disp_res_col[4]:
+        st.metric("$~q_{{\\rm opt}}~$",f"{q_new: .3f}")
+    
+
 
 """   """
 st.subheader("最適化の結果",divider="orange")
@@ -113,52 +162,57 @@ with selected_tab1:
     except:
         st.warning("まだ最適化が終わっていません．")
 with selected_tab2:
-    try:
-        # 最初の散布図の作成
-        fig_opt = go.Figure()
+    # import numpy as np
+    # import plotly.graph_objects as go
+    # import streamlit as st
 
-        # 散布図の追加（最初のデータ）
-        fig_opt.add_trace(go.Scatter(x=x, y=y, mode='markers', name='データ', marker=dict(color="blue")))
+    # セッションステートの初期化
+    if "animation_running" not in st.session_state:
+        st.session_state["animation_running"] = False
 
-        # 初期の直線を描く
-        initial_p = np.float64(popt_history_df.iloc[0]["p_hist"])
-        initial_q = np.float64(popt_history_df.iloc[0]["q_hist"])
-        initial_y_pred = initial_p * x + initial_q
-    
-        # 初期直線を描く
-        line_trace = go.Scatter(x=x, y=initial_y_pred, mode="lines", name="回帰直線", line=dict(color="red"))
-        fig_opt.add_trace(line_trace)
+    if st.button("アニメーションの作成"):
+        # 事前にプロット用データを生成
+        frame_data = []
+        popt_history_df = popt_history_df.head(500)
+        for i in range(len(popt_history_df)):
+            y_pred = popt_history_df.iloc[i]["p_hist"] * x + popt_history_df.iloc[i]["q_hist"]
+            frame_data.append(y_pred)
 
-        # フレームの設定（動的生成）
-        fig_opt.frames = [
+        # 初期プロット
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(x=x, y=y, mode='markers', name='データ', marker=dict(color='blue')))
+        fig.add_trace(go.Scatter(x=x, y=frame_data[0], mode='lines', name='回帰直線', line=dict(color='red')))
+
+        # フレームの追加
+        frames = [
             go.Frame(
-                data=[  # フレームごとのデータ
-                    go.Scatter(x=x, y=y, mode="markers", name="データ", marker=dict(color="blue")),
-                    go.Scatter(x=x, y=popt_history_df.iloc[i]["p_hist"] * x + popt_history_df.iloc[i]["q_hist"],
-                            mode="lines", name="回帰直線", line=dict(color="red"))
+                data=[
+                    go.Scatter(x=x, y=y, mode='markers', name='データ', marker=dict(color='blue')),
+                    go.Scatter(x=x, y=frame_data[i], mode='lines', name='回帰直線', line=dict(color='red'))
                 ],
                 name=f"Step {i+1}"
             )
-            for i in range(1, len(popt_history_df))  # フレームの数だけ生成
+            for i in range(len(frame_data))
         ]
+        fig.frames = frames
 
-        # アニメーションの設定
-        fig_opt.update_layout(
+        # レイアウトとアニメーション設定
+        fig.update_layout(
             title="回帰直線の変化 (アニメーション)",
             xaxis=dict(title="x"),
             yaxis=dict(title="y"),
             updatemenus=[{
                 "type": "buttons",
                 "direction": "left",
-                "x": 0.5,
-                "y": -0.2,
-                "xanchor": "center",
-                "yanchor": "top",
+                "x": 1.05,
+                "y": 0,
+                "xanchor": "right",
+                "yanchor": "bottom",
                 "buttons": [
                     {
                         "label": "再生",
                         "method": "animate",
-                        "args": [None, {"frame": {"duration": 0.05, "redraw": True}, "fromcurrent": True}]
+                        "args": [None, {"frame": {"duration": 60, "redraw": True}, "fromcurrent": True}]
                     },
                     {
                         "label": "停止",
@@ -168,22 +222,71 @@ with selected_tab2:
                 ]
             }],
             sliders=[{
-                "currentvalue": {
-                    "prefix": "Frame: ",
-                    "visible": True,
-                    "xanchor": "center",
-                },
+                "currentvalue": {"prefix": "Frame: ", "visible": True, "xanchor": "center"},
                 "steps": [
-                    {"args": [
-                        [f"Step {i+1}"],
-                        {"frame": {"duration": 0.05, "redraw": True}, "mode": "immediate"}
-                    ], "label": f"Step {i+1}", "method": "animate"}
-                    for i in range(len(popt_history_df))
+                    {"args": [[f"Step {i+1}"], {"frame": {"duration": 60, "redraw": True}, "mode": "immediate"}],
+                    "label": f"Step {i+1}", "method": "animate"}
+                    for i in range(len(frame_data))
                 ]
             }]
         )
 
-        # 描画
-        st.plotly_chart(fig_opt)
-    except : 
-        st.warning("まだ最適化が終わっていません．")
+        # Streamlitで表示
+        st.plotly_chart(fig)
+
+#### Matplotlibバージョン
+    # import matplotlib.pyplot as plt
+    # import japanize_matplotlib
+    # from matplotlib.animation import FuncAnimation, PillowWriter
+
+    # # セッションステートの初期化
+    # if "animation_running" not in st.session_state:
+    #     st.session_state["animation_running"] = False
+
+    # # 事前にプロット用データを生成
+    # frame_data = []
+    # popt_history_df = popt_history_df.head(500)
+    # for i in range(len(popt_history_df)):
+    #     y_pred = popt_history_df.iloc[i]["p_hist"] * x + popt_history_df.iloc[i]["q_hist"]
+    #     frame_data.append(y_pred)
+
+    # # プロットの準備
+    # fig, ax = plt.subplots()
+    # sc = ax.scatter(x, y, color='blue', label='データ')
+    # line, = ax.plot(x, frame_data[0], color='red', label='回帰直線')
+    # frame_text = ax.text(0.05, 0.95, '', transform=ax.transAxes, fontsize=12, verticalalignment='top')
+    # ax.set_title("回帰直線の変化 (アニメーション)")
+    # ax.set_xlabel("x")
+    # ax.set_ylabel("y")
+    # ax.legend()
+
+    # # アニメーション関数
+    # def update(frame):
+    #     line.set_ydata(frame_data[frame])
+    #     frame_text.set_text(f"Frame: {frame+1}/{len(frame_data)}")
+    #     return line, frame_text
+
+    # # ボタンで再生・停止
+    # col1, col2 = st.columns(2)
+    # with col1:
+    #     if st.button("再生"):
+    #         st.session_state["animation_running"] = True
+
+    # with col2:
+    #     if st.button("停止"):
+    #         st.session_state["animation_running"] = False
+
+    # # アニメーションの実行制御
+    # if st.session_state["animation_running"]:
+    #     with st.spinner("matplotlibによるアニメ作成中"):
+    #         ani = FuncAnimation(fig, update, frames=len(frame_data), interval=60, blit=True)
+    #     with st.spinner("GIFアニメの作成中"):
+    #         animation_path = "animation.gif"
+    #         ani.save(animation_path, writer=PillowWriter(fps=30))
+    #     st.image(animation_path, caption="回帰直線の変化", use_container_width=True)
+    # else:
+    #     st.write("アニメーションは停止中です。")
+
+
+    # except : 
+    #     st.warning("まだ最適化が終わっていません．")
