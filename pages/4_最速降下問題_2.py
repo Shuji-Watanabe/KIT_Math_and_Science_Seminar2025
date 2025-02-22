@@ -27,23 +27,34 @@ x_range = np.linspace(0, 1, n)  # x 座標は等間隔
 y_init = np.linspace(A[1], B[1], n)  # 初期y座標（直線）
 y_init[0], y_init[-1] = A[1], B[1]  # A, B は固定
 
+# # --- 補間関数の適用 ---
+# def interpolate(x, y, method):
+#     if method == "ラグランジュ補間":
+#         return lagrange(x, y)
+#     elif method == "ニュートン補間":
+#         return BarycentricInterpolator(x, y)
+#     elif method == "1次スプライン":
+#         return CubicSpline(x, y, bc_type="linear")
+#     elif method == "2次スプライン":
+#         return CubicSpline(x, y, bc_type="quadratic")
+#     elif method == "3次スプライン":
+#         return CubicSpline(x, y, bc_type="not-a-knot")
+#     elif method == "Bスプライン":
+#         return make_interp_spline(x, y, k=3)
+#     elif method == "n次多項式":
+#         return np.poly1d(np.polyfit(x, y, len(x) - 1))
+#     return None
+
 # --- 補間関数の適用 ---
 def interpolate(x, y, method):
-    if method == "ラグランジュ補間":
-        return lagrange(x, y)
-    elif method == "ニュートン補間":
-        return BarycentricInterpolator(x, y)
-    elif method == "1次スプライン":
-        return CubicSpline(x, y, bc_type="linear")
-    elif method == "2次スプライン":
-        return CubicSpline(x, y, bc_type="quadratic")
-    elif method == "3次スプライン":
+    if method == "3次スプライン":
         return CubicSpline(x, y, bc_type="not-a-knot")
     elif method == "Bスプライン":
         return make_interp_spline(x, y, k=3)
     elif method == "n次多項式":
         return np.poly1d(np.polyfit(x, y, len(x) - 1))
     return None
+
 
 # --- 目的関数（移動時間を最小化） ---
 def travel_time(y_points_var):
@@ -76,25 +87,31 @@ with st.spinner("最適化計算中..."):
 
     res = minimize(travel_time, y_init[1:-1], method="BFGS", callback=callback)
 
-# --- オイラー・ラグランジュ方程式の解 ---
 def euler_lagrange_solution():
     """
     最速降下曲線（Brachistochrone）を解析的に求める（単位：m, s）
     - サイクロイド曲線をパラメトリックに表現
-    - θ を 0 から π まで変化させて x, y 座標と時間 t を求める
+    - θ を 0 から θ_max まで変化させて x, y 座標と時間 t を求める
     """
     g = 9.80  # 重力加速度 [m/s²]
-    
-    # サイクロイドの半径 R（高さの差hから計算）
-    R = 0.5  # [m] 出発点 A(0, 1) と終点 B(1, 0) の高さ差に基づく
-    
+    # --- 制御点の設定（A, B を固定） ---
+    A = np.array([0.0, 1.0])  # 出発点 (固定)
+    B = np.array([1.0, 0.0])  # 終点 (固定)
+    # 高さの差 h と横方向の差 w
+    h = A[1] - B[1]  # 出発点Aの高さ - 終点Bの高さ [m]
+    w = B[0] - A[0]  # 横方向の距離 [m]
+
+    # θ の最大値（終点でのθ）
+    theta_max = np.arccos(1 - h)
+    # サイクロイドの半径 R を求める
+    R = h / (1 - np.cos(theta_max))
     # θの範囲
-    theta_vals = np.linspace(0, np.pi, 100)
-    
+    theta_vals = np.linspace(0, theta_max, 100)
     # サイクロイドのパラメトリック方程式
-    x_sol = R * (theta_vals - np.sin(theta_vals))  # [m]
-    y_sol = 1 - R * (1 - np.cos(theta_vals))  # [m]
-    
+    x_raw = R * (theta_vals - np.sin(theta_vals))  # 未スケールの x 座標
+    y_sol = A[1] - R * (1 - np.cos(theta_vals))  # [m]
+    # x 座標のスケーリング（始点A, 終点Bに合わせる）
+    x_sol = A[0] + (x_raw / x_raw[-1]) * w
     # 時間の計算 t = sqrt(2R/g) * θ [s]
     t_sol = np.sqrt(2 * R / g) * theta_vals  # [s]
     return x_sol, y_sol, t_sol
