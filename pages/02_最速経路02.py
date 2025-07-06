@@ -59,10 +59,10 @@ def compute_gradient_simpson(yk, xk, eps=1e-6):
 
 def steepest_descent_simpson_sigmoid_momentum(a, b, N,yk=None,
                                               gamma_nodes=1.0,
-                                              kappa=3, delta=3.5,
-                                              alpha=1, beta=0.001,
+                                              kappa=5, delta=3,
+                                              alpha=2, beta=0.0001,
                                               momentum=0.8,
-                                              max_iter=4000, tol=1e-8):
+                                              max_iter=6000, tol=1e-8):
     if delta is None:
         delta = 2 - 0.01 * N
     xk = nonuniform_nodes(a, N, gamma_nodes)
@@ -107,88 +107,116 @@ a, b = 0.6, 0.3
 if 'saved_datasets' not in st.session_state:
     st.session_state.saved_datasets = []
 
-# パスワード入力
-code_input = st.text_input("解の表示のためのパスワード", "")
+col2_0 = st.columns([2,1,1])
 
-# モード選択
-mode = st.radio("モード選択", ["手動最適化", "自動最適化"])
-
-# 共通：分割数 N
-N = st.slider("分割数 N", min_value=1, max_value=10, value=10, step=1)
-xk = nonuniform_nodes(a, N, gamma_nodes=1.0)
+with col2_0[0]:
+    # モード選択
+    mode = st.radio("モード選択", ["手動最適化", "自動最適化"],horizontal=True)
+with col2_0[1]:
+    # 共通：分割数 N
+    N = st.number_input("分割数 N", min_value=1, max_value=20, value=6, step=1)
+    xk = nonuniform_nodes(a, N, gamma_nodes=1.0)
+with col2_0[2]:
+    # パスワード入力
+    code_input = st.text_input("解答表示のパスワード")
 
 if mode == "手動最適化":
-    col1, col2 = st.columns(2)
-
-    # 右カラム：y座標入力＋保存・リセット
-    with col2:
-        st.markdown("### 各節点の y 座標入力")
-        yk = []
-        for j in range(len(xk)):
-            if j == 0:
-                st.write("y[0] = 0")
-                yk.append(0.0)
-            elif j == len(xk)-1:
-                st.write(f"y[{j}] = {b}")
-                yk.append(b)
-            else:
-                default = b * (xk[j]/a)
+    st.markdown("### 各節点の y 座標入力")
+    Col_num = 5
+    Input_cols = st.columns( Col_num )
+    yk = []
+    for j in range(len(xk)):
+        
+        if j == 0:
+            with Input_cols[0]:
+                yj = st.number_input(
+                    f"y[{0}]", value=0
+                    ,min_value=0,max_value=0, key=f"manual_y_{0}"
+                )
+            yk.append(0.0)
+        elif j == len(xk)-1:
+            with Input_cols[ j%Col_num]:
+                yj = st.number_input(
+                    f"y[{j}]", value=b,
+                    format="%.4f",step=0.001, min_value=b,max_value=b, key=f"manual_y_{j}"
+                )
+            yk.append(b)
+        else:
+            default = b * (xk[j]/a)
+            with Input_cols[ j%Col_num]:
                 yj = st.number_input(
                     f"y[{j}]", value=float(default),
                     format="%.4f", step=0.01, key=f"manual_y_{j}"
                 )
-                yk.append(yj)
+            yk.append(yj)
+    # 移動時間計算（等加速度モデル）
+    T_manual = travel_time_manual(yk, xk)
+        
 
-        # 移動時間計算（等加速度モデル）
-        T_manual = travel_time_manual(yk, xk)
-
-        # 保存・リセット
-        save_col, reset_col = st.columns(2)
-        with save_col:
-            if st.button("保存"):
-                st.session_state.saved_datasets.append({'y': yk.copy(), 'T': T_manual})
-                st.success(f"データを保存しました (T={T_manual:.6f} 秒)")
-        with reset_col:
-            if st.button("リセット"):
-                for j in range(1, len(xk)-1):
-                    st.session_state.pop(f"manual_y_{j}", None)
-                del st.session_state.saved_datasets
-                # リセット後は自動で再レンダリングされます
-
+    # 右カラム：y座標入力＋保存・リセット
+    # 保存・リセット
+    save_col, reset_col = st.columns(2)
+    with save_col:
+        if st.button("保存"):
+            st.session_state.saved_datasets.append({'y': yk.copy(), 'T': T_manual})
+            st.success(f"データを保存しました (T={T_manual:.6f} 秒)")
+    with reset_col:
+        if st.button("リセット"):
+            for j in range(1, len(xk)-1):
+                st.session_state.pop(f"manual_y_{j}", None)
+            del st.session_state.saved_datasets
+            # リセット後は自動で再レンダリングされます
+            
+    if "saved_datasets" not in st.session_state:
+        st.session_state["saved_datasets"] = []
+    col1, col2 = st.columns([1,1])
     # 左カラム：プロット
-    with col1:
-        fig = go.Figure()
-        fig.add_trace(go.Scatter(
-            x=xk, y=yk, mode='lines+markers', name='手動解'
-        ))
-        # パスワード正解時のみ厳密解を表示
-        if code_input == "2501":
-            xc, yc = exact_cycloid(a, b)
-            fig.add_trace(go.Scatter(
-                x=xc, y=yc, mode='lines',
-                name='厳密解 (Cycloid)',
-                line=dict(color='orange', dash='dash')
-            ))
-        fig.update_layout(
-            title=f"手動解 (T = {T_manual:.6f} 秒)",
-            xaxis_title="x", yaxis_title="y",
-            yaxis_autorange='reversed'
-        )
-        st.plotly_chart(fig, use_container_width=True)
-
-    # 保存データの移動時間プロット
     if st.session_state.saved_datasets:
-        times = [d['T'] for d in st.session_state.saved_datasets]
-        fig2 = go.Figure()
-        fig2.add_trace(go.Scatter(
-            x=list(range(len(times))), y=times,
-            mode='lines+markers', name='保存時間'
-        ))
-        fig2.update_layout(
-            title="保存データの移動時間",
-            xaxis_title="データ番号", yaxis_title="移動時間 T"
-        )
-        st.plotly_chart(fig2, use_container_width=True)
+        with col2:
+            # 保存データの移動時間プロット
+            times = [d['T'] for d in st.session_state.saved_datasets]
+            fig2 = go.Figure()
+            fig2.add_trace(go.Scatter(
+                x=list(range(len(times))), y=times,
+                mode='lines+markers', name='保存時間'
+            ))
+            fig2.update_layout(
+                title="保存データの移動時間",
+                xaxis_title="データ番号", yaxis_title="移動時間 T"
+            )
+            st.plotly_chart(fig2, use_container_width=True)
+        with col1:
+            fig = go.Figure()
+            fig.add_trace(go.Scatter(
+                x=xk, y=yk, mode='lines+markers', name='手動解'
+            ))
+            # パスワード正解時のみ厳密解を表示
+            if code_input == "2501":
+                xc, yc = exact_cycloid(a, b)
+                fig.add_trace(go.Scatter(
+                    x=xc, y=yc, mode='lines',
+                    name='厳密解 (Cycloid)',
+                    line=dict(color='orange', dash='dash')
+                ))
+            fig.update_layout(
+                title=f"手動解 (T = {T_manual:.6f} 秒)",
+                xaxis_title="x", yaxis_title="y",
+                yaxis_autorange='reversed'
+            )
+            fig.update_layout(
+            legend=dict(
+                x=1,
+                y=1,
+                xanchor="right",
+                yanchor="top",
+                bgcolor="rgba(255,255,255,0.5)",  # 背景を少し透過させても見やすい
+                bordercolor="black",
+                borderwidth=1
+            ))
+            st.plotly_chart(fig, use_container_width=True)
+
+    else :
+        st.write("保存して")
 
 elif mode == "自動最適化":
     st.markdown("### 自動最適化：最小移動時間データを初期値に使用")
@@ -200,7 +228,7 @@ elif mode == "自動最適化":
     else:
         yk_init = [0.0] + [b*(x/a) for x in xk[1:-1]] + [b]
 
-    st.write("初期解（保存データから）:", [f"{y:.4f}" for y in yk_init])
+    # st.write("初期解（保存データから）:", [f"{y:.4f}" for y in yk_init])
 
     if st.button("Start Optimization"):
         xk_opt, yk_opt = steepest_descent_simpson_sigmoid_momentum(a, b, N, yk=yk_init)
