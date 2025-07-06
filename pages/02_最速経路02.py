@@ -57,35 +57,76 @@ def compute_gradient_simpson(yk, xk, eps=1e-6):
         grad[i] = (travel_time_simpson(ykp, xk) - travel_time_simpson(ykm, xk)) / (2 * eps)
     return grad
 
-def steepest_descent_simpson_sigmoid_momentum(a, b, N,yk=None,
-                                              gamma_nodes=1.0,
-                                              kappa=5, delta=3,
-                                              alpha=2, beta=0.0001,
-                                              momentum=0.8,
-                                              max_iter=6000, tol=1e-8):
-    if delta is None:
-        delta = 2 - 0.01 * N
+# def steepest_descent_simpson_sigmoid_momentum(a, b, N,yk=None,
+#                                               gamma_nodes=1.0,
+#                                               kappa=5, delta=3,
+#                                               alpha=2, beta=0.0001,
+#                                               momentum=0.8,
+#                                               max_iter=6000, tol=1e-8):
+#     if delta is None:
+#         delta = 2 - 0.01 * N
+#     xk = nonuniform_nodes(a, N, gamma_nodes)
+#     if yk is None:
+#         yk = b * (xk / a)
+#     else :
+#         yk=yk
+#     v = np.zeros_like(yk)
+#     u = xk / a
+#     lr_factor = 1 / (1 + np.exp(-kappa * (u - delta)))
+#     lr_factor[0] = lr_factor[-1] = 0.0
+
+#     for k in range(max_iter):
+#         grad = compute_gradient_simpson(yk, xk)
+#         step = alpha / (1 + beta * k)
+#         update = step * lr_factor * grad
+#         v = momentum * v + update
+#         yk[1:-1] -= v[1:-1]
+#         yk = np.clip(yk, 0.0, None)
+#         yk[0], yk[-1] = 0.0, b
+#         if np.linalg.norm(v[1:-1]) < tol:
+#             break
+#     return xk, yk
+
+def steepest_descent_simpson_limit_gradient(a, b, N, yk=None,
+                                            gamma_nodes=1.0,
+                                            alpha=0.005, beta=0.0001,
+                                            max_iter=4000, tol=1e-7):
     xk = nonuniform_nodes(a, N, gamma_nodes)
+
     if yk is None:
         yk = b * (xk / a)
-    else :
-        yk=yk
-    v = np.zeros_like(yk)
-    u = xk / a
-    lr_factor = 1 / (1 + np.exp(-kappa * (u - delta)))
-    lr_factor[0] = lr_factor[-1] = 0.0
+    else:
+        yk = np.array(yk, dtype=float)
 
     for k in range(max_iter):
         grad = compute_gradient_simpson(yk, xk)
+
+        # 勾配制限：各点で傾き角を ±π/3 に制限
+        for i in range(1, N):
+            dx = xk[i+1] - xk[i-1]
+            dy = yk[i+1] - yk[i-1]
+            angle = np.arctan2(dy, dx)
+            if abs(angle) > np.pi / 6:
+                limited_angle = np.sign(angle) * (np.pi / 6)
+                slope = np.tan(limited_angle)
+                dy_new = slope * dx
+                y_mid = 0.5 * (yk[i-1] + yk[i+1])
+                yk[i] = y_mid + 0.5 * dy_new  # 修正点に再代入
+
+        # 勾配降下ステップ
         step = alpha / (1 + beta * k)
-        update = step * lr_factor * grad
-        v = momentum * v + update
-        yk[1:-1] -= v[1:-1]
+        yk[1:-1] -= step * grad[1:-1]
+
+        # 制約（非負かつ端点固定）
         yk = np.clip(yk, 0.0, None)
         yk[0], yk[-1] = 0.0, b
-        if np.linalg.norm(v[1:-1]) < tol:
+
+        # 収束判定
+        if np.linalg.norm(grad[1:-1]) < tol:
             break
+
     return xk, yk
+
 
 def solve_theta(a, b):
     return fsolve(lambda th: (th - np.sin(th)) / (1 - np.cos(th)) - a/b, np.pi)[0]
@@ -126,14 +167,13 @@ if mode == "手動最適化":
     if st.session_state.saved_datasets:
         idx = st.selectbox("保存済みデータを選択", list(range(len(st.session_state.saved_datasets))),
                            format_func=lambda i: f"データ {i}", key="select_dataset")
-        yk = st.session_state.saved_datasets[idx]['y']
+        selected_y = st.session_state.saved_datasets[idx]['y']
     else:
-        yk = []
+        selected_y = None
     Col_num = 5
     Input_cols = st.columns( Col_num )
-    
+    yk = []
     for j in range(len(xk)):
-        
         if j == 0:
             with Input_cols[0]:
                 yj = st.number_input(
@@ -149,7 +189,7 @@ if mode == "手動最適化":
                 )
             yk.append(b)
         else:
-            default = b * (xk[j]/a)
+            default = selected_y[j] if selected_y is not None else b*(xk[j]/a)
             with Input_cols[ j%Col_num]:
                 yj = st.number_input(
                     f"y[{j}]", value=float(default),
@@ -238,7 +278,8 @@ elif mode == "自動最適化":
     # st.write("初期解（保存データから）:", [f"{y:.4f}" for y in yk_init])
 
     if st.button("Start Optimization"):
-        xk_opt, yk_opt = steepest_descent_simpson_sigmoid_momentum(a, b, N, yk=yk_init)
+        # xk_opt, yk_opt = steepest_descent_simpson_sigmoid_momentum(a, b, N, yk=yk_init)
+        xk_opt, yk_opt = steepest_descent_simpson_limit_gradient(a, b, N, yk=yk_init)
         T_num = travel_time_simpson(yk_opt, xk_opt)
         fig = go.Figure()
         # 初期手動経路
