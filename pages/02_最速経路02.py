@@ -122,9 +122,16 @@ with col2_0[2]:
 
 if mode == "手動最適化":
     st.markdown("### 各節点の y 座標入力")
+    # 保存済みデータ選択
+    if st.session_state.saved_datasets:
+        idx = st.selectbox("保存済みデータを選択", list(range(len(st.session_state.saved_datasets))),
+                           format_func=lambda i: f"データ {i}", key="select_dataset")
+        yk = st.session_state.saved_datasets[idx]['y']
+    else:
+        yk = []
     Col_num = 5
     Input_cols = st.columns( Col_num )
-    yk = []
+    
     for j in range(len(xk)):
         
         if j == 0:
