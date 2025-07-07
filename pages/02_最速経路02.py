@@ -3,50 +3,111 @@ import numpy as np
 import plotly.graph_objects as go
 from scipy.optimize import fsolve
 
+
+# 固定パラメータ
+# a, b = 0.6, 0.3
+a, b = np.pi, 2.00
+
 # ---------------------------------
 # コア関数定義
 # ---------------------------------
-def nonuniform_nodes(a, N, gamma_nodes=2.5):
+def nonuniform_nodes(a, N, gamma_nodes=1):
     u = np.linspace(0, 1, N+1)
     return a * u**gamma_nodes
 
 # 手動モード：各区間を等加速度運動とみなし移動時間を計算
-def travel_time_manual(yk, xk, g=9.81):
-    total_t = 0.0
-    v_prev = 0.0
-    for i in range(len(xk) - 1):
-        dx = xk[i+1] - xk[i]
-        dy = yk[i+1] - yk[i]
-        s = np.hypot(dx, dy)
-        theta = np.arctan2(dy, dx)
-        a_inst = g * np.sin(theta)
-        if abs(a_inst) < 1e-8:
-            # 加速度ほぼゼロなら等速
-            t = s / max(v_prev, 1e-6)
-        else:
-            disc = v_prev**2 + 2 * a_inst * s
-            t = (-v_prev + np.sqrt(max(disc, 0.0))) / a_inst
-        total_t += t
-        v_prev += a_inst * t
-    return total_t
+# def travel_time_manual(yk, xk, g=9.80665):
+#     total_t = 0.0
+#     v_prev = 0.0
+#     for i in range(len(xk) - 1):
+#         dx = xk[i+1] - xk[i]
+#         dy = yk[i+1] - yk[i]
+#         s = np.hypot(dx, dy)
+#         theta = np.arctan2(dy, dx)
+#         a_inst = g * np.sin(theta)
+#         if abs(a_inst) < 1e-8:
+#             # 加速度ほぼゼロなら等速
+#             t = s / max(v_prev, 1e-6)
+#         else:
+#             disc = v_prev**2 + 2 * a_inst * s
+#             t = (-v_prev + np.sqrt(max(disc, 0.0))) / a_inst
+#         total_t += t
+#         v_prev += a_inst * t
+#     return total_t
+def travel_time_manual(yk, xk, g=9.80665):
+    """
+    以前の手動評価関数 travel_time_manual を Simpson 法版に置き換えました。
+    """
+    # return travel_time_simpson(yk, xk, g=g)
+    return travel_time_numeric(yk, xk, g=g)
 
 # Simpson＋Sigmoid＋Momentum 自動最適化用
-def travel_time_simpson(yk, xk, g=9.81, eps=1e-6):
-    N = len(xk) - 1
-    total = 0.0
-    for i in range(N):
-        dx, dy = xk[i+1] - xk[i], yk[i+1] - yk[i]
-        ds = np.hypot(dx, dy)
-        yi, yip1 = max(eps, yk[i]), max(eps, yk[i+1])
-        ymid = max(eps, 0.5*(yi + yip1))
-        vi = np.sqrt(2 * g * yi)
-        vmid = np.sqrt(2 * g * ymid)
-        vip1 = np.sqrt(2 * g * yip1)
-        if i == 0:
-            total += ds / vmid
-        else:
-            total += ds * (1/vi + 4/vmid + 1/vip1) / 6
-    return total
+# def travel_time_simpson(yk, xk, g=9.81, eps=1e-6):
+#     N = len(xk) - 1
+#     total = 0.0
+#     for i in range(N):
+#         dx, dy = xk[i+1] - xk[i], yk[i+1] - yk[i]
+#         ds = np.hypot(dx, dy)
+#         yi, yip1 = max(eps, yk[i]), max(eps, yk[i+1])
+#         ymid = max(eps, 0.5*(yi + yip1))
+#         vi = np.sqrt(2 * g * yi)
+#         vmid = np.sqrt(2 * g * ymid)
+#         vip1 = np.sqrt(2 * g * yip1)
+#         if i == 0:
+#             total += ds / vmid
+#         else:
+#             total += ds * (1/vi + 4/vmid + 1/vip1) / 6
+#     return total
+
+# def compute_gradient_simpson(yk, xk, eps=1e-6):
+#     N = len(xk) - 1
+#     grad = np.zeros_like(yk)
+#     for i in range(1, N):
+#         ykp, ykm = yk.copy(), yk.copy()
+#         ykp[i] += eps; ykm[i] -= eps
+#         grad[i] = (travel_time_simpson(ykp, xk) - travel_time_simpson(ykm, xk)) / (2 * eps)
+#     return grad
+
+from scipy.interpolate import interp1d, make_interp_spline
+from scipy.optimize import fsolve
+def travel_time_numeric(yk, xk, g=9.80665,
+                        interp_method='linear',
+                        degree=3,  # for polynomial/B-spline
+                        num_points=500,  # 分割数
+                        eps=1e-8):
+    """
+    yk, xk: 各ノードの y, x 配列 (長さ N+1)
+    interp_method: 'linear', 'quadratic', 'cubic', 'bspline'
+    degree: 多項式次数（quadratic=2, cubic=3）
+    num_points: x軸方向の評価点数
+    """
+    # 補完関数の作成
+    if interp_method == 'linear':
+        f = interp1d(xk, yk, kind='linear')
+    elif interp_method in ('quadratic', 'cubic'):
+        k = 2 if interp_method=='quadratic' else 3
+        f = make_interp_spline(xk, yk, k=k)
+    elif interp_method == 'bspline':
+        # Bスプライン（3次）の例
+        f = make_interp_spline(xk, yk, k=degree)
+    else:
+        raise ValueError(f"Unknown interp_method: {interp_method}")
+
+    # 評価点生成
+    xs = np.linspace(xk[0], xk[-1], num_points)
+    ys = f(xs)
+
+    # ds/v を区間ごとに足し合わせ
+    dx = np.diff(xs)
+    dy = np.diff(ys)
+    ds = np.hypot(dx, dy)
+    y_mid = np.maximum((ys[:-1] + ys[1:]) / 2, eps)
+    v_mid = np.sqrt(2 * g * y_mid)
+    t = np.sum(ds / v_mid)
+    return t
+
+
+
 
 def compute_gradient_simpson(yk, xk, eps=1e-6):
     N = len(xk) - 1
@@ -54,22 +115,22 @@ def compute_gradient_simpson(yk, xk, eps=1e-6):
     for i in range(1, N):
         ykp, ykm = yk.copy(), yk.copy()
         ykp[i] += eps; ykm[i] -= eps
-        grad[i] = (travel_time_simpson(ykp, xk) - travel_time_simpson(ykm, xk)) / (2 * eps)
+        grad[i] = (travel_time_numeric(ykp, xk) - travel_time_numeric(ykm, xk)) / (2 * eps)
     return grad
 
 def steepest_descent_simpson_sigmoid_momentum(a, b, N,yk=None,
                                               gamma_nodes=1.0,
-                                              kappa=5, delta=3,
-                                              alpha=2, beta=0.0001,
+                                              kappa=2, delta=3,
+                                              alpha=3, beta=0.0001,
                                               momentum=0.8,
-                                              max_iter=6000, tol=1e-8):
+                                              max_iter=20000, tol=1e-9):
     if delta is None:
         delta = 2 - 0.01 * N
     xk = nonuniform_nodes(a, N, gamma_nodes)
     if yk is None:
         yk = b * (xk / a)
-    else :
-        yk=yk
+    else:
+        yk = np.array(yk, dtype=float)   # ← ここでコピーを取る
     v = np.zeros_like(yk)
     u = xk / a
     lr_factor = 1 / (1 + np.exp(-kappa * (u - delta)))
@@ -87,46 +148,6 @@ def steepest_descent_simpson_sigmoid_momentum(a, b, N,yk=None,
             break
     return xk, yk
 
-# def steepest_descent_simpson_limit_gradient(a, b, N, yk=None,
-#                                             gamma_nodes=1.0,
-#                                             alpha=0.005, beta=0.0001,
-#                                             max_iter=4000, tol=1e-7):
-#     xk = nonuniform_nodes(a, N, gamma_nodes)
-
-#     if yk is None:
-#         yk = b * (xk / a)
-#     else:
-#         yk = np.array(yk, dtype=float)
-
-#     for k in range(max_iter):
-#         grad = compute_gradient_simpson(yk, xk)
-
-#         # 勾配制限：各点で傾き角を ±π/3 に制限
-#         for i in range(1, N):
-#             dx = xk[i+1] - xk[i-1]
-#             dy = yk[i+1] - yk[i-1]
-#             angle = np.arctan2(dy, dx)
-#             if abs(angle) > np.pi / 6:
-#                 limited_angle = np.sign(angle) * (np.pi / 6)
-#                 slope = np.tan(limited_angle)
-#                 dy_new = slope * dx
-#                 y_mid = 0.5 * (yk[i-1] + yk[i+1])
-#                 yk[i] = y_mid + 0.5 * dy_new  # 修正点に再代入
-
-#         # 勾配降下ステップ
-#         step = alpha / (1 + beta * k)
-#         yk[1:-1] -= step * grad[1:-1]
-
-#         # 制約（非負かつ端点固定）
-#         yk = np.clip(yk, 0.0, None)
-#         yk[0], yk[-1] = 0.0, b
-
-#         # 収束判定
-#         if np.linalg.norm(grad[1:-1]) < tol:
-#             break
-
-#     return xk, yk
-
 
 def solve_theta(a, b):
     return fsolve(lambda th: (th - np.sin(th)) / (1 - np.cos(th)) - a/b, np.pi)[0]
@@ -141,9 +162,6 @@ def exact_cycloid(a, b, num=300):
 # ---------------------------------
 st.title("Simpson+Sigmoid+Momentum による最速降下曲線")
 
-# 固定パラメータ
-a, b = 0.6, 0.3
-
 # セッションステート初期化
 if 'saved_datasets' not in st.session_state:
     st.session_state.saved_datasets = []
@@ -155,8 +173,8 @@ with col2_0[0]:
     mode = st.radio("モード選択", ["手動最適化", "自動最適化"],horizontal=True)
 with col2_0[1]:
     # 共通：分割数 N
-    N = st.number_input("分割数 N", min_value=1, max_value=20, value=6, step=1)
-    xk = nonuniform_nodes(a, N, gamma_nodes=1.0)
+    N = st.number_input("分割数 N", min_value=1, max_value=100, value=6, step=1)
+    xk = nonuniform_nodes(a, N, gamma_nodes=1)
 with col2_0[2]:
     # パスワード入力
     code_input = st.text_input("解答表示のパスワード")
@@ -190,12 +208,15 @@ if mode == "手動最適化":
             yk.append(b)
         else:
             default = selected_y[j] if selected_y is not None else b*(xk[j]/a)
-            with Input_cols[ j%Col_num]:
-                yj = st.number_input(
-                    f"y[{j}]", value=float(default),
-                    format="%.4f", step=0.01, key=f"manual_y_{j}"
-                )
-            yk.append(yj)
+            if N <= 20 :
+                with Input_cols[ j%Col_num]:
+                    yj = st.number_input(
+                        f"y[{j}]", value=float(default),
+                        format="%.4f", step=0.01, key=f"manual_y_{j}"
+                    )
+                yk.append(yj)
+            else :
+                yk.append(default)
     # 移動時間計算（等加速度モデル）
     T_manual = travel_time_manual(yk, xk)
         
@@ -279,8 +300,11 @@ elif mode == "自動最適化":
 
     if st.button("Start Optimization"):
         xk_opt, yk_opt = steepest_descent_simpson_sigmoid_momentum(a, b, N, yk=yk_init)
-        # xk_opt, yk_opt = steepest_descent_simpson_limit_gradient(a, b, N, yk=yk_init)
-        T_num = travel_time_simpson(yk_opt, xk_opt)
+        # T_num = travel_time_simpson(yk_opt, xk_opt)
+        T_num = travel_time_numeric(yk_opt
+                                    ,xk_opt
+                                    ,interp_method='bspline'
+                                    ,degree=3)
         fig = go.Figure()
         # 初期手動経路
         fig.add_trace(go.Scatter(
@@ -304,3 +328,15 @@ elif mode == "自動最適化":
             yaxis_autorange='reversed'
         )
         st.plotly_chart(fig, use_container_width=True)
+        # 結果表示
+        # 手動評価 (加速度ベース)
+        T_manual = travel_time_manual(yk_init, xk)
+        # 自動評価 (Simpson)
+        T_auto = travel_time_numeric(yk_opt, xk)
+        # 厳密解評価
+        x_c, y_c = exact_cycloid(a, b)
+        R = b / (1 - np.cos(solve_theta(a, b)))
+        T_exact = np.pi * np.sqrt(R / 9.81)
+        st.write(f"手動評価の移動時間: {T_manual:.6f} 秒")
+        st.write(f"Simpson 法評価の移動時間: {T_auto:.6f} 秒")
+        st.write(f"厳密解の移動時間:       {T_exact:.6f} 秒")
