@@ -160,7 +160,7 @@ def exact_cycloid(a, b, num=300):
 # ---------------------------------
 # Streamlit UI
 # ---------------------------------
-st.title("Simpson+Sigmoid+Momentum による最速降下曲線")
+st.title("最速経路探索２")
 
 # セッションステート初期化
 if 'saved_datasets' not in st.session_state:
@@ -303,8 +303,7 @@ elif mode == "自動最適化":
         # T_num = travel_time_simpson(yk_opt, xk_opt)
         T_num = travel_time_numeric(yk_opt
                                     ,xk_opt
-                                    ,interp_method='bspline'
-                                    ,degree=3)
+                                    ,interp_method='cubic')
         fig = go.Figure()
         # 初期手動経路
         fig.add_trace(go.Scatter(
@@ -337,6 +336,6 @@ elif mode == "自動最適化":
         x_c, y_c = exact_cycloid(a, b)
         R = b / (1 - np.cos(solve_theta(a, b)))
         T_exact = np.pi * np.sqrt(R / 9.81)
-        st.write(f"手動評価の移動時間: {T_manual:.6f} 秒")
-        st.write(f"Simpson 法評価の移動時間: {T_auto:.6f} 秒")
-        st.write(f"厳密解の移動時間:       {T_exact:.6f} 秒")
+        st.write(f"手動最適化経路の移動時間: {T_manual:.6f} 秒")
+        st.write(f"自動最適化経路の移動時間: {T_auto:.6f} 秒")
+        st.write(f"厳密解経路の移動時間:       {T_exact:.6f} 秒")

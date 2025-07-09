@@ -58,7 +58,7 @@ def optimize_with_history(initial_X, alpha, tol=1e-6, max_iter=1000):
     return history_X, history_T
 
 # --- Streamlit UI ---
-st.title("二媒質間の最速経路探索")
+st.title("最速経路探索１")
 # --- 実行方法 ---
 st.header("**使い方**", divider="violet")
 st.markdown("""
