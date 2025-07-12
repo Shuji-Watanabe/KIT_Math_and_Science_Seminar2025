@@ -6,7 +6,7 @@ from scipy.optimize import fsolve
 
 # 固定パラメータ
 # a, b = 0.6, 0.3
-a, b = np.pi, 2.00
+a, b = np.pi, 2.0e+10
 
 # ---------------------------------
 # コア関数定義
@@ -173,7 +173,7 @@ with col2_0[0]:
     mode = st.radio("モード選択", ["手動最適化", "自動最適化"],horizontal=True)
 with col2_0[1]:
     # 共通：分割数 N
-    N = st.number_input("分割数 N", min_value=1, max_value=100, value=6, step=1)
+    N = st.number_input("分割数 N", min_value=1, max_value=20, value=10, step=1)
     xk = nonuniform_nodes(a, N, gamma_nodes=1)
 with col2_0[2]:
     # パスワード入力
@@ -314,7 +314,7 @@ elif mode == "自動最適化":
             x=xk_opt, y=yk_opt, mode='lines+markers', name='最適化経路'
         ))
         # パスワード正解時のみ厳密解を表示
-        if code_input == "2501":
+        if code_input == "5963":
             xc, yc = exact_cycloid(a, b)
             fig.add_trace(go.Scatter(
                 x=xc, y=yc, mode='lines',
