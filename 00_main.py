@@ -20,11 +20,16 @@ st.sidebar.markdown(
     "**Updates**\n"
     "- App 1.0:2025.7.14\n"
 )
-
+#====== ライセンス情報
+st.sidebar.markdown(
+    "© 2025 Shuji Watanabe  \n"
+    "[MIT License](https://opensource.org/licenses/MIT)"
+)
 #====== タイトルと説明
 st.header("KIT数理講座2025", divider="rainbow")
 """
 このアプリケーションはKIT数理講座2025で使用したプログラムです．
+
 """
 
 #====== QRコードとURLの表示
