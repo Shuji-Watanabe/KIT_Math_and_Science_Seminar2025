@@ -34,7 +34,7 @@ st.header("KIT数理講座2025",divider="rainbow")
 st.subheader("Network URL", divider="rainbow")
 from mylib import display
 from io import BytesIO
-if path == '/mount/src/KIT_Math_and_Science_Seminar2025':
+if path == '/mount/src/kit_math_and_science_seminar2025':
     network_url, qr_image = display.display_URL_QRCode(location_str,streamlit_url=url)
 else:
     network_url, qr_image = display.display_URL_QRCode(location_str)
