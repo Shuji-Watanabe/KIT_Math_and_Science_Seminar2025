@@ -3,11 +3,60 @@ import numpy as np
 import plotly.graph_objects as go
 from scipy.optimize import fsolve
 
+st.title("最速経路探索２")
 
-# 固定パラメータ
-# a, b = 0.6, 0.3
-a, b = np.pi, 2.0e+10
-
+st.header("初期パラメータの設定",divider="violet")
+with st.expander("設定の確認・変更") :
+    #a, b = 0.60, 0.4
+    """ ##### 原点と座標軸
+    原点＝始点，x軸の向き：右向き正，y軸の向き：下向き正
+    """
+    """ ##### 終点の位置の設定"""
+    input_cols = st.columns([1]*4)
+    with input_cols[0] :
+        a    = st.number_input("終点の $x$ 座標 $\\rm [m]$"
+                                , min_value=float(0)
+                                ,value=np.pi
+                                ,format='%.3f'
+                                ,step=0.001)
+        a = float(a)
+    with input_cols[1] :
+        b    = st.number_input("終点の $y$ 座標 $\\rm [m]$"
+                                ,max_value=float(3)
+                                ,min_value=float(0)
+                                ,value=float(2)
+                                ,format='%.3f'
+                                ,step=0.001)  
+        b    = float(b)
+    # """ ##### 最急降下法用のパラメータ"""
+    # input_cols = st.columns([1]*4)
+    # with input_cols[0] :
+    #     max_iter    = st.number_input("最大更新回数"
+    #                             , min_value=1
+    #                             , max_value=50000
+    #                             ,value=20000)
+    # with input_cols[1] :
+    #     alpha    = st.number_input("$\\alpha$"
+    #                             , min_value=0.0001
+    #                             , max_value=5
+    #                             , value=20000)
+        
+    #                                           gamma_nodes=1.0,
+    #                                           kappa=2, delta=3,
+    #                                           alpha=3, beta=0.0001,
+    #                                           momentum=0.8,
+    #                                           max_iter=20000, tol=1e-9
+    # """
+    # $$ 
+    # \\mathbf{y}_{i,k+1} = \\mathbf{y}_{i,k} 
+    # - m \\cdot v_{i,k} +\\frac{\\alpha}{1+\\beta \\cdot k}
+    # \\cdot \\frac{1}{1+e^{ - \\kappa\\cdot \\big(x_{i}/x_0 -\\delta\\big) }}
+    # \\cdot 	\\frac{\\partial T}{\\partial y_{i}} \\Big|_{\mathbf{x}=\mathbf{x}_{k-1},\mathbf{y}=\mathbf{y}_{k-1} }
+    # $$
+    # """
+    
+    # with input_cols[0] :
+           
 # ---------------------------------
 # コア関数定義
 # ---------------------------------
@@ -15,58 +64,11 @@ def nonuniform_nodes(a, N, gamma_nodes=1):
     u = np.linspace(0, 1, N+1)
     return a * u**gamma_nodes
 
-# 手動モード：各区間を等加速度運動とみなし移動時間を計算
-# def travel_time_manual(yk, xk, g=9.80665):
-#     total_t = 0.0
-#     v_prev = 0.0
-#     for i in range(len(xk) - 1):
-#         dx = xk[i+1] - xk[i]
-#         dy = yk[i+1] - yk[i]
-#         s = np.hypot(dx, dy)
-#         theta = np.arctan2(dy, dx)
-#         a_inst = g * np.sin(theta)
-#         if abs(a_inst) < 1e-8:
-#             # 加速度ほぼゼロなら等速
-#             t = s / max(v_prev, 1e-6)
-#         else:
-#             disc = v_prev**2 + 2 * a_inst * s
-#             t = (-v_prev + np.sqrt(max(disc, 0.0))) / a_inst
-#         total_t += t
-#         v_prev += a_inst * t
-#     return total_t
 def travel_time_manual(yk, xk, g=9.80665):
     """
     以前の手動評価関数 travel_time_manual を Simpson 法版に置き換えました。
     """
-    # return travel_time_simpson(yk, xk, g=g)
     return travel_time_numeric(yk, xk, g=g)
-
-# Simpson＋Sigmoid＋Momentum 自動最適化用
-# def travel_time_simpson(yk, xk, g=9.81, eps=1e-6):
-#     N = len(xk) - 1
-#     total = 0.0
-#     for i in range(N):
-#         dx, dy = xk[i+1] - xk[i], yk[i+1] - yk[i]
-#         ds = np.hypot(dx, dy)
-#         yi, yip1 = max(eps, yk[i]), max(eps, yk[i+1])
-#         ymid = max(eps, 0.5*(yi + yip1))
-#         vi = np.sqrt(2 * g * yi)
-#         vmid = np.sqrt(2 * g * ymid)
-#         vip1 = np.sqrt(2 * g * yip1)
-#         if i == 0:
-#             total += ds / vmid
-#         else:
-#             total += ds * (1/vi + 4/vmid + 1/vip1) / 6
-#     return total
-
-# def compute_gradient_simpson(yk, xk, eps=1e-6):
-#     N = len(xk) - 1
-#     grad = np.zeros_like(yk)
-#     for i in range(1, N):
-#         ykp, ykm = yk.copy(), yk.copy()
-#         ykp[i] += eps; ykm[i] -= eps
-#         grad[i] = (travel_time_simpson(ykp, xk) - travel_time_simpson(ykm, xk)) / (2 * eps)
-#     return grad
 
 from scipy.interpolate import interp1d, make_interp_spline
 from scipy.optimize import fsolve
@@ -130,7 +132,7 @@ def steepest_descent_simpson_sigmoid_momentum(a, b, N,yk=None,
     if yk is None:
         yk = b * (xk / a)
     else:
-        yk = np.array(yk, dtype=float)   # ← ここでコピーを取る
+        yk = np.array(yk, dtype=float)  
     v = np.zeros_like(yk)
     u = xk / a
     lr_factor = 1 / (1 + np.exp(-kappa * (u - delta)))
@@ -160,7 +162,6 @@ def exact_cycloid(a, b, num=300):
 # ---------------------------------
 # Streamlit UI
 # ---------------------------------
-st.title("最速経路探索２")
 
 # セッションステート初期化
 if 'saved_datasets' not in st.session_state:
@@ -181,37 +182,45 @@ with col2_0[2]:
 
 if mode == "手動最適化":
     st.markdown("### 各節点の y 座標入力")
-    # 保存済みデータ選択
-    if st.session_state.saved_datasets:
-        idx = st.selectbox("保存済みデータを選択", list(range(len(st.session_state.saved_datasets))),
-                           format_func=lambda i: f"データ {i}", key="select_dataset")
-        selected_y = st.session_state.saved_datasets[idx]['y']
-    else:
-        selected_y = None
     Col_num = 5
     Input_cols = st.columns( Col_num )
+    # 保存済みデータ選択
+    data_col = st.columns([1,1,1,1,2])
+    with data_col[-1]:
+        if st.session_state.saved_datasets:
+            idx = st.selectbox("保存済みデータを選択", list(range(len(st.session_state.saved_datasets))),
+                            format_func=lambda i: f"データ {i}", key="select_dataset")
+            selected_y = st.session_state.saved_datasets[idx]['y']
+        else:
+            selected_y = None
+            
     yk = []
     for j in range(len(xk)):
         if j == 0:
+            Input_cols = st.columns( Col_num )
             with Input_cols[0]:
                 yj = st.number_input(
-                    f"y[{0}]", value=0
-                    ,min_value=0,max_value=0, key=f"manual_y_{0}"
+                    f"$y_{{{j}}}$", value=float(0)
+                    ,min_value=float(0),max_value=float(0), key=f"manual_y_{0}"
                 )
             yk.append(0.0)
         elif j == len(xk)-1:
-            with Input_cols[ j%Col_num]:
+            # with Input_cols[ j%Col_num]:
+            Input_cols = st.columns( Col_num )
+            with Input_cols[ 0]:
                 yj = st.number_input(
-                    f"y[{j}]", value=b,
+                    f"$y_{{{j}}}$", value=b,
                     format="%.4f",step=0.001, min_value=b,max_value=b, key=f"manual_y_{j}"
                 )
             yk.append(b)
         else:
+            if j==1 :
+                Input_cols = st.columns( Col_num )
             default = selected_y[j] if selected_y is not None else b*(xk[j]/a)
             if N <= 20 :
-                with Input_cols[ j%Col_num]:
+                with Input_cols[ (j-1)%Col_num]:
                     yj = st.number_input(
-                        f"y[{j}]", value=float(default),
+                        f"$y_{{{j}}}$", value=float(default),
                         format="%.4f", step=0.01, key=f"manual_y_{j}"
                     )
                 yk.append(yj)
@@ -220,21 +229,22 @@ if mode == "手動最適化":
     # 移動時間計算（等加速度モデル）
     T_manual = travel_time_manual(yk, xk)
         
-
-    # 右カラム：y座標入力＋保存・リセット
-    # 保存・リセット
-    save_col, reset_col = st.columns(2)
-    with save_col:
-        if st.button("保存"):
+    with data_col[0]:
+        if st.button("保　　存"):
             st.session_state.saved_datasets.append({'y': yk.copy(), 'T': T_manual})
-            st.success(f"データを保存しました (T={T_manual:.6f} 秒)")
-    with reset_col:
+            with data_col[3]:
+                st.success("処理完了")
+    with data_col[1]:
         if st.button("リセット"):
             for j in range(1, len(xk)-1):
                 st.session_state.pop(f"manual_y_{j}", None)
             del st.session_state.saved_datasets
-            # リセット後は自動で再レンダリングされます
-            
+            with data_col[3]:
+                st.success("処理完了")
+    with data_col[2]:
+        if st.button("更　　新"):
+            with data_col[3]:
+                st.success("処理完了")
     if "saved_datasets" not in st.session_state:
         st.session_state["saved_datasets"] = []
     col1, col2 = st.columns([1,1])
@@ -267,7 +277,7 @@ if mode == "手動最適化":
                     line=dict(color='orange', dash='dash')
                 ))
             fig.update_layout(
-                title=f"手動解 (T = {T_manual:.6f} 秒)",
+                title=f"手動解 (T = {T_manual:.4f} 秒)",
                 xaxis_title="x", yaxis_title="y",
                 yaxis_autorange='reversed'
             )
@@ -284,10 +294,19 @@ if mode == "手動最適化":
             st.plotly_chart(fig, use_container_width=True)
 
     else :
-        st.write("保存して")
-
+        # st.write("保存して")
+        yk = []
+        for j in range(len(xk)):
+            if j == 0:
+                yk.append(0.0)
+            elif j == len(xk)-1:
+                yk.append(b)
+            else:
+                yk.append( b*(xk[j]/a))
+        T_manual = travel_time_manual(yk, xk)
+        st.session_state.saved_datasets.append({'y': yk, 'T': T_manual})
 elif mode == "自動最適化":
-    st.markdown("### 自動最適化：最小移動時間データを初期値に使用")
+    st.markdown("### 自動最適化（手動最適化の結果を初期値に使用）")
 
     # 最小Tの保存データを初期値として
     if st.session_state.saved_datasets:
@@ -301,7 +320,7 @@ elif mode == "自動最適化":
     if st.button("Start Optimization"):
         xk_opt, yk_opt = steepest_descent_simpson_sigmoid_momentum(a, b, N, yk=yk_init)
         # T_num = travel_time_simpson(yk_opt, xk_opt)
-        T_num = travel_time_numeric(yk_opt
+        T_num = travel_time_numeric( yk_opt
                                     ,xk_opt
                                     ,interp_method='cubic')
         fig = go.Figure()
@@ -322,7 +341,7 @@ elif mode == "自動最適化":
                 line=dict(color='orange', dash='dash')
             ))
         fig.update_layout(
-            title=f"自動最適化結果 (T_num = {T_num:.6f} 秒)",
+            title=f"自動最適化結果 (T_num = {T_num:.4f} 秒)",
             xaxis_title="x", yaxis_title="y",
             yaxis_autorange='reversed'
         )
@@ -336,6 +355,11 @@ elif mode == "自動最適化":
         x_c, y_c = exact_cycloid(a, b)
         R = b / (1 - np.cos(solve_theta(a, b)))
         T_exact = np.pi * np.sqrt(R / 9.81)
-        st.write(f"手動最適化経路の移動時間: {T_manual:.6f} 秒")
-        st.write(f"自動最適化経路の移動時間: {T_auto:.6f} 秒")
-        st.write(f"厳密解経路の移動時間:       {T_exact:.6f} 秒")
+        """#### 各移動時間"""
+        Result_col = st.columns(3)
+        with Result_col[0]:
+            st.write(f"手動最適化経路: {T_manual:.4f} 秒")
+        with Result_col[1]:
+            st.write(f"自動最適化経路: {T_auto:.4f} 秒")
+        with Result_col[2]:
+            st.write(f"サイクロイド:{T_exact:.4f} 秒")
