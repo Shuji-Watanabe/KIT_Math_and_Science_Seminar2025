@@ -234,22 +234,27 @@ elif mode == "自動最適化":
         for i, (X_val, T_val) in enumerate(zip(hist_X, hist_T)):
             # 左：経路
             path1 = go.Scatter(x=[0, X_val], y=[y_start, 0]
-                               , mode='lines+markers'
+                               , mode='lines'
                                , name='領域1' 
                                , line=dict(color='blue', width=3)
-                               , marker=dict(color=marker_color,size=10)
+                            #    , marker=dict(color=marker_color,size=10)
                                , showlegend=False)
             path2 = go.Scatter(x=[X_val, xt], y=[0, yt]
-                               , mode='lines+markers'
+                               , mode='lines'
                                , name='領域2'
                                , line=dict(color='green', width=3)
-                               , marker=dict(color=marker_color,size=10)
+                            #    , marker=dict(color=marker_color,size=10)
                                , showlegend=False)
             path3 = go.Scatter(x=[0, xt], y=[y_start, yt]
                                , mode='markers'
-                               , marker=dict(color=marker_color, symbol='x', size=10)
+                               , marker=dict(color=marker_color, symbol='x', size=12)
                                , name='始点・終点'
                                , showlegend=False)
+            # path4 = go.Scatter(x=[xt], y=[0]
+            #                     , mode='markers'
+            #                     , marker=dict(color=marker_color, size=12)
+            #                     , name='中継点'
+            #                     , showlegend=False)
             # 右：時間履歴
             time_trace = go.Scatter(
                 x=hist_X[:i+1], y=hist_T[:i+1],
@@ -289,10 +294,10 @@ elif mode == "自動最適化":
         )
         fig.frames = frames
 
+        # Step数と各ステップの X, T を下に表示
+        st.markdown("### 最適化履歴")
+        st.write(f"Step {i}: $x_{{{i}}}$ = {hist_X[-1]:.3f}, $T_{{{i}}}$ = {hist_T[-1]:.4f}")
         # 描画
         st.plotly_chart(fig, use_container_width=True)
 
-        # Step数と各ステップの X, T を下に表示
-        st.markdown("### 最適化履歴")
-        st.write(f"Step {i}: X = {hist_X[-1]:.3f}, T = {hist_T[-1]:.4f}")
 
