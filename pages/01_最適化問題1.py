@@ -132,7 +132,7 @@ if mode == "手動最適化":
         st.plotly_chart(fig_path)
         st.write(output_text)
     with col2:
-        code_input = st.text_input("$x$の最適値表示のためのパスワード", "")
+        code_input = st.text_input("解答表示のパスワード", "")
         # 時間履歴プロット（点のみ）
         fig_time = go.Figure()
         # 履歴点（+マーク, 青）
@@ -156,7 +156,7 @@ if mode == "手動最適化":
                 name='最小時間点'
             ))
         # 厳密解表示
-        if code_input == "20250719":
+        if code_input == "2525":
             X_exact = steepest_descent()  # デフォルトパラメータで計算
             fig_time.add_vline(x=X_exact, line=dict(color='orange', dash='dash'), annotation_text="数値的な解", annotation_position="top right")
         fig_time.update_layout(title="最適化の履歴", xaxis_title="x 座標", yaxis_title="移動時間 T", width=400, height=400)
