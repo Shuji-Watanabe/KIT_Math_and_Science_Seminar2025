@@ -28,6 +28,25 @@ with st.expander("設定の確認・変更") :
                                 ,format='%.3f'
                                 ,step=0.001)  
         b    = float(b)
+    f""" ##### 分割数
+    $x=0$ から $x={a:.3f}$ の間を $N$ 分割します．（初期設定は等分割）
+    """
+    if not "N" in st.session_state:
+        st.session_state.N = 10
+    N_col = st.columns([1,1,1])
+    with N_col[0]:
+        N = st.number_input("分割数 N", min_value=1, max_value=20, value=10, step=1)
+    
+    with N_col[2]:
+        if st.session_state.N != N:
+            if st.button("分割数$N$を更新しますか?"):
+                st.session_state.N = N
+                del st.session_state.saved_datasets
+                with N_col[1]:
+                    st.success("更新完了")
+            else:   
+                with N_col[1]:
+                    st.write(f'$N={st.session_state.N}$を使用')
     # """ ##### 最急降下法用のパラメータ"""
     # input_cols = st.columns([1]*4)
     # with input_cols[0] :
@@ -162,21 +181,17 @@ def exact_cycloid(a, b, num=300):
 # ---------------------------------
 # Streamlit UI
 # ---------------------------------
-
+xk = nonuniform_nodes(a, N, gamma_nodes=1)
 # セッションステート初期化
 if 'saved_datasets' not in st.session_state:
     st.session_state.saved_datasets = []
-
-col2_0 = st.columns([2,1,1])
+col2_0 = st.columns([2,1])
 
 with col2_0[0]:
     # モード選択
     mode = st.radio("モード選択", ["手動最適化", "自動最適化"],horizontal=True)
+
 with col2_0[1]:
-    # 共通：分割数 N
-    N = st.number_input("分割数 N", min_value=1, max_value=20, value=10, step=1)
-    xk = nonuniform_nodes(a, N, gamma_nodes=1)
-with col2_0[2]:
     # パスワード入力
     code_input = st.text_input("解答表示のパスワード")
 
