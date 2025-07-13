@@ -5,7 +5,7 @@ import streamlit as st
 import os 
 path = os.getcwd()
 st.session_state.main_path = path
-
+st.write(path)
 if path == '/mount/src/KIT_Math_and_Science_Seminar2025':
     location_str = "streamlit_Community_Cloud"
     url = "https://sample-app-simple-linear-regression.streamlit.app/"
