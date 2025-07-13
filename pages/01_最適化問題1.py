@@ -111,7 +111,7 @@ with col01[1]:
 # --- 図の並列表示 ---
 col1, col2 = st.columns(2)
 
-
+marker_color = "red"
 if mode == "手動最適化":
     with col1:
         initial_X = 1.00
@@ -125,26 +125,46 @@ if mode == "手動最適化":
         output_text = f"点$\\rm P$の $x$ 座標 = {X:.3f}， 移動時間 $T$ = {T:.4f}"
         # 経路プロット
         fig_path = go.Figure()
-        fig_path.add_trace(go.Scatter(x=[0, X], y=[y_start, 0], mode='lines+markers', name='領域１'))
-        fig_path.add_trace(go.Scatter(x=[X, xt], y=[0, yt], mode='lines+markers', name='領域２'))
-        fig_path.add_trace(go.Scatter(x=[0, xt], y=[y_start, yt], mode='markers', marker=dict(symbol='x', size=10), name='始点・終点'))
-        fig_path.update_layout(title="移動経路", xaxis_title="x", yaxis_title="y", width=400, height=400)
+        # 領域1（濃い緑）
+        fig_path.add_trace(go.Scatter(
+            x=[0, X], y=[y_start, 0], mode='lines+markers',
+            line=dict(color='green', width=2),
+            marker=dict(color=marker_color, size=8),  # 始点
+            showlegend=False
+        ))
+        # 領域2（青）
+        fig_path.add_trace(go.Scatter(
+            x=[X, xt], y=[0, yt], mode='lines+markers',
+            line=dict(color='blue', width=2),
+            marker=dict(color=marker_color, size=8),  # 終点
+            showlegend=False
+        ))
+        # 始点・終点（xマーク、色はテーマ依存）
+        fig_path.add_trace(go.Scatter(
+            x=[0, xt], y=[y_start, yt], mode='markers',
+            marker=dict(color=marker_color, symbol='x', size=12),
+            showlegend=False
+        ))
+        fig_path.update_layout(
+            title="移動経路", xaxis_title="x", yaxis_title="y", width=400, height=400,
+            showlegend=False
+        )
         st.plotly_chart(fig_path)
         st.write(output_text)
+
     with col2:
         code_input = st.text_input("解答表示のパスワード", "")
         # 時間履歴プロット（点のみ）
         fig_time = go.Figure()
-        # 履歴点（+マーク, 青）
         fig_time.add_trace(go.Scatter(
             x=st.session_state.history_X,
             y=st.session_state.history_T,
             mode='markers',
-            marker=dict(color='blue', size=4, symbol='cross'),  # 'cross' = +
-            name='履歴'
+            marker=dict(color='blue', size=4, symbol='cross'),
+            name='履歴',
+            showlegend=False
         ))
-
-        # 最小値を赤の丸でプロット
+        # 最小値点（赤丸, オプション）
         if st.session_state.history_T:
             idx_min = int(np.argmin(st.session_state.history_T))
             min_T = st.session_state.history_T[idx_min]
@@ -152,9 +172,23 @@ if mode == "手動最適化":
             fig_time.add_trace(go.Scatter(
                 x=[min_X], y=[min_T],
                 mode='markers',
-                marker=dict(color='red', size=4, symbol='circle'),
-                name='最小時間点'
+                marker=dict(color='red', size=6, symbol='circle'),
+                name='最小時間点',
+                showlegend=False
             ))
+            curr_X = st.session_state.history_X[-1]
+            curr_T = st.session_state.history_T[-1]
+            fig_time.add_trace(go.Scatter(
+                                            x=[curr_X], y=[curr_T],
+                                            mode='markers',
+                                            marker=dict(
+                                                symbol='circle-open'
+                                                ,size=10
+                                                ,line=dict(width=4, color='magenta')
+                                            ),
+                                            name='現在'
+                                            , showlegend=False
+                                        ))
         # 厳密解表示
         if code_input == "2525":
             X_exact = steepest_descent()  # デフォルトパラメータで計算
@@ -199,16 +233,30 @@ elif mode == "自動最適化":
         ymin, ymax = min(hist_T)*0.9, max(hist_T)*1.1
         for i, (X_val, T_val) in enumerate(zip(hist_X, hist_T)):
             # 左：経路
-            path1 = go.Scatter(x=[0, X_val], y=[y_start, 0], mode='lines+markers', name='媒質1')
-            path2 = go.Scatter(x=[X_val, xt], y=[0, yt], mode='lines+markers', name='媒質2')
-            path3 = go.Scatter(x=[0, xt], y=[y_start, yt], mode='markers',
-                               marker=dict(symbol='x', size=5), name='始点・終点')
+            path1 = go.Scatter(x=[0, X_val], y=[y_start, 0]
+                               , mode='lines+markers'
+                               , name='領域1' 
+                               , line=dict(color='blue', width=3)
+                               , marker=dict(color=marker_color,size=10)
+                               , showlegend=False)
+            path2 = go.Scatter(x=[X_val, xt], y=[0, yt]
+                               , mode='lines+markers'
+                               , name='領域2'
+                               , line=dict(color='green', width=3)
+                               , marker=dict(color=marker_color,size=10)
+                               , showlegend=False)
+            path3 = go.Scatter(x=[0, xt], y=[y_start, yt]
+                               , mode='markers'
+                               , marker=dict(color=marker_color, symbol='x', size=10)
+                               , name='始点・終点'
+                               , showlegend=False)
             # 右：時間履歴
             time_trace = go.Scatter(
                 x=hist_X[:i+1], y=hist_T[:i+1],
                 mode='markers',
                 marker=dict(color='blue', symbol='cross', size=5),
                 name='履歴'
+                , showlegend=False
             )
             # フレーム用
             frames.append(go.Frame(
