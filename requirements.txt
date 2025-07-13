@@ -6,4 +6,4 @@ matplotlib==3.9.2
 japanize_matplotlib
 scipy
 plotly
-mylib
+qrcode
