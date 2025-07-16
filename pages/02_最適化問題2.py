@@ -17,16 +17,15 @@ with st.expander("設定の確認・変更") :
         a    = st.number_input("終点の $x$ 座標 $\\rm [m]$"
                                 , min_value=float(0)
                                 ,value=np.pi
-                                ,format='%.3f'
-                                ,step=0.001)
+                                ,format='%.4f'
+                                ,step=0.0001)
         a = float(a)
     with input_cols[1] :
         b    = st.number_input("終点の $y$ 座標 $\\rm [m]$"
-                                ,max_value=float(3)
                                 ,min_value=float(0)
                                 ,value=float(2)
-                                ,format='%.3f'
-                                ,step=0.001)  
+                                ,format='%.4f'
+                                ,step=0.0001)  
         b    = float(b)
     f""" ##### 分割数
     $x=0$ から $x={a:.3f}$ の間を $N$ 分割します．（初期設定は等分割）
