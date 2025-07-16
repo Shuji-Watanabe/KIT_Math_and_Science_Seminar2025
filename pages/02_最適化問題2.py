@@ -236,7 +236,7 @@ if mode == "手動最適化":
                 with Input_cols[ (j-1)%Col_num]:
                     yj = st.number_input(
                         f"$y_{{{j}}}$", value=float(default),
-                        format="%.4f", step=0.01, key=f"manual_y_{j}"
+                        format="%.4f", step=0.001, key=f"manual_y_{j}"
                     )
                 yk.append(yj)
             else :
