@@ -225,7 +225,7 @@ if mode == "手動最適化":
             with Input_cols[ 0]:
                 yj = st.number_input(
                     f"$y_{{{j}}}$", value=b,
-                    format="%.4f",step=0.001, min_value=b,max_value=b, key=f"manual_y_{j}"
+                    format="%.4f",step=0.0001, min_value=b,max_value=b, key=f"manual_y_{j}"
                 )
             yk.append(b)
         else:
@@ -236,7 +236,7 @@ if mode == "手動最適化":
                 with Input_cols[ (j-1)%Col_num]:
                     yj = st.number_input(
                         f"$y_{{{j}}}$", value=float(default),
-                        format="%.4f", step=0.001, key=f"manual_y_{j}"
+                        format="%.4f", step=0.0001, key=f"manual_y_{j}"
                     )
                 yk.append(yj)
             else :
