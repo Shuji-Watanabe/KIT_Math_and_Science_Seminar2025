@@ -196,7 +196,7 @@ with col2_0[1]:
     code_input = st.text_input("解答表示のパスワード")
 
 if mode == "手動最適化":
-    st.markdown("### 各節点の y 座標入力")
+    st.markdown("### 各通過点の y 座標入力")
     Col_num = 5
     Input_cols = st.columns( Col_num )
     # 保存済みデータ選択
@@ -242,7 +242,7 @@ if mode == "手動最適化":
             else :
                 yk.append(default)
     # 移動時間計算（等加速度モデル）
-    T_manual = travel_time_manual(yk, xk)
+    T_manual = travel_time_manual(yk, xk,interp_method='cubic')
         
     with data_col[0]:
         if st.button("保　　存"):
@@ -370,7 +370,7 @@ elif mode == "自動最適化":
         x_c, y_c = exact_cycloid(a, b)
         R = b / (1 - np.cos(solve_theta(a, b)))
         T_exact = np.pi * np.sqrt(R / 9.81)
-        """#### 各移動時間"""
+        """#### 移動時間"""
         Result_col = st.columns(3)
         with Result_col[0]:
             st.write(f"手動最適化経路: {T_manual:.4f} 秒")
