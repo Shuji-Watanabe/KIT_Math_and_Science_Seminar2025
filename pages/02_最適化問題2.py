@@ -87,7 +87,7 @@ def travel_time_manual(yk, xk, g=9.80665):
     """
     以前の手動評価関数 travel_time_manual を Simpson 法版に置き換えました。
     """
-    return travel_time_numeric(yk, xk, g=g)
+    return travel_time_numeric(yk, xk, g=g, interp_method= 'cubic')
 
 from scipy.interpolate import interp1d, make_interp_spline
 from scipy.optimize import fsolve
@@ -242,7 +242,7 @@ if mode == "手動最適化":
             else :
                 yk.append(default)
     # 移動時間計算（等加速度モデル）
-    T_manual = travel_time_manual(yk, xk,interp_method='cubic')
+    T_manual = travel_time_manual(yk, xk)
         
     with data_col[0]:
         if st.button("保　　存"):
