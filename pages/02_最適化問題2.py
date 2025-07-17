@@ -333,10 +333,9 @@ elif mode == "自動最適化":
 
     if st.button("Start Optimization"):
         xk_opt, yk_opt = steepest_descent_simpson_sigmoid_momentum(a, b, N, yk=yk_init)
-        # T_num = travel_time_simpson(yk_opt, xk_opt)
         T_num = travel_time_numeric( yk_opt
                                     ,xk_opt
-                                    ,interp_method='cubic')
+                                    ,interp_method='linear')
         fig = go.Figure()
         # 初期手動経路
         fig.add_trace(go.Scatter(
@@ -355,7 +354,7 @@ elif mode == "自動最適化":
                 line=dict(color='orange', dash='dash')
             ))
         fig.update_layout(
-            title=f"自動最適化結果 (T_num = {T_num:.4f} 秒)",
+            title=f"自動最適化結果",
             xaxis_title="x", yaxis_title="y",
             yaxis_autorange='reversed'
         )
@@ -363,8 +362,6 @@ elif mode == "自動最適化":
         # 結果表示
         # 手動評価 (加速度ベース)
         T_manual = travel_time_manual(yk_init, xk)
-        # 自動評価 (Simpson)
-        T_auto = travel_time_numeric(yk_opt, xk)
         # 厳密解評価
         x_c, y_c = exact_cycloid(a, b)
         R = b / (1 - np.cos(solve_theta(a, b)))
@@ -374,6 +371,6 @@ elif mode == "自動最適化":
         with Result_col[0]:
             st.write(f"手動最適化経路: {T_manual:.4f} 秒")
         with Result_col[1]:
-            st.write(f"自動最適化経路: {T_auto:.4f} 秒")
+            st.write(f"自動最適化経路: {T_num:.4f} 秒")
         with Result_col[2]:
             st.write(f"サイクロイド:{T_exact:.4f} 秒")
