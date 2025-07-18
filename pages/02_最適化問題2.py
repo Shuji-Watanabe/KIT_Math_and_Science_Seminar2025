@@ -365,7 +365,7 @@ elif mode == "自動最適化":
         # 厳密解評価
         x_c, y_c = exact_cycloid(a, b)
         R = b / (1 - np.cos(solve_theta(a, b)))
-        T_exact = np.pi * np.sqrt(R / 9.81)
+        T_exact = np.pi * np.sqrt(R / 9.806651)
         """#### 移動時間"""
         Result_col = st.columns(3)
         with Result_col[0]:
