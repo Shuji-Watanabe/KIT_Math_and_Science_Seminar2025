@@ -3,7 +3,7 @@ import numpy as np
 import plotly.graph_objects as go
 
 # --- Streamlit UI ---
-st.title("最速経路探索１")
+st.title("最適化問題１")
 # --- パラメータ定義 ---
 st.header("初期パラメータの設定",divider="violet")
 with st.expander("設定の確認・変更") :
