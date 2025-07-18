@@ -3,7 +3,7 @@ import numpy as np
 import plotly.graph_objects as go
 from scipy.optimize import fsolve
 
-st.title("最速経路探索２")
+st.title("最適化問題２")
 
 st.header("初期パラメータの設定",divider="violet")
 with st.expander("設定の確認・変更") :
@@ -17,15 +17,15 @@ with st.expander("設定の確認・変更") :
         a    = st.number_input("終点の $x$ 座標 $\\rm [m]$"
                                 , min_value=float(0)
                                 ,value=np.pi
-                                ,format='%.4f'
-                                ,step=0.0001)
+                                ,format='%.3f'
+                                ,step=0.001)
         a = float(a)
     with input_cols[1] :
         b    = st.number_input("終点の $y$ 座標 $\\rm [m]$"
                                 ,min_value=float(0)
                                 ,value=float(2)
-                                ,format='%.4f'
-                                ,step=0.0001)  
+                                ,format='%.3f'
+                                ,step=0.001)  
         b    = float(b)
     f""" ##### 分割数
     $x=0$ から $x={a:.3f}$ の間を $N$ 分割します．（初期設定は等分割）
@@ -224,7 +224,7 @@ if mode == "手動最適化":
             with Input_cols[ 0]:
                 yj = st.number_input(
                     f"$y_{{{j}}}$", value=b,
-                    format="%.4f",step=0.0001, min_value=b,max_value=b, key=f"manual_y_{j}"
+                    format="%.4f",step=0.01, min_value=b,max_value=b, key=f"manual_y_{j}"
                 )
             yk.append(b)
         else:
@@ -235,7 +235,7 @@ if mode == "手動最適化":
                 with Input_cols[ (j-1)%Col_num]:
                     yj = st.number_input(
                         f"$y_{{{j}}}$", value=float(default),
-                        format="%.4f", step=0.0001, key=f"manual_y_{j}"
+                        format="%.4f", step=0.01, key=f"manual_y_{j}"
                     )
                 yk.append(yj)
             else :
