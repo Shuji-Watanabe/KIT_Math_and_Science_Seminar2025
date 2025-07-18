@@ -283,7 +283,7 @@ if mode == "手動最適化":
                 x=xk, y=yk, mode='lines+markers', name='手動解'
             ))
             # パスワード正解時のみ厳密解を表示
-            if code_input == "2501":
+            if code_input == "5963":
                 xc, yc = exact_cycloid(a, b)
                 fig.add_trace(go.Scatter(
                     x=xc, y=yc, mode='lines',
